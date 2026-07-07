@@ -1,0 +1,96 @@
+-- Получаем необходимые сервисы
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+local playerGui = localPlayer:WaitForChild("PlayerGui")
+
+-- Создаем экранный интерфейс (ScreenGui)
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AnchorShopGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+-- Создаем главное окошко (Frame)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 320, 0, 360) -- Удобный размер для 5+ кнопок
+mainFrame.Position = UDim2.new(0.5, -160, 0.5, -180) -- Центр экрана
+mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+-- Закругляем углы окошка
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0, 12)
+frameCorner.Parent = mainFrame
+
+-- Создаем заголовок окошка
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Name = "TitleLabel"
+titleLabel.Size = UDim2.new(1, 0, 0, 50)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "Магазин Предметов"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 20
+titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.Parent = mainFrame
+
+-- Создаем контейнер с прокруткой для кнопок (ScrollingFrame)
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Name = "ButtonContainer"
+scrollFrame.Size = UDim2.new(1, -20, 1, -60)
+scrollFrame.Position = UDim2.new(0, 10, 0, 50)
+scrollFrame.BackgroundTransparency = 1
+scrollFrame.BorderSizePixel = 0
+-- Задаем фиксированный CanvasSize с запасом, чтобы прокрутка работала четко
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 400) 
+scrollFrame.ScrollBarThickness = 6
+scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+scrollFrame.Parent = mainFrame
+
+-- Автоматический список, который выравнивает кнопки друг за другом
+local listLayout = Instance.new("UIListLayout")
+listLayout.Parent = scrollFrame
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Padding = UDim.new(0, 10) -- Расстояние между кнопками
+listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-- Функция для безопасного вызова события покупки
+local function safeInvoke(id, productType)
+    local event = workspace:FindFirstChild("PromptRobuxEvent")
+    if event and event:IsA("RemoteFunction") then
+        event:InvokeServer(id, productType)
+    else
+        warn("Событие PromptRobuxEvent не найдено в workspace!")
+    end
+end
+
+-- Универсальная функция для быстрого создания кнопок в списке
+local function createBuyButton(text, color, productId, layoutOrder)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0, 260, 0, 50) -- Задали точный фиксированный размер кнопки
+    button.BackgroundColor3 = color
+    button.BorderSizePixel = 0
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextSize = 16
+    button.Font = Enum.Font.SourceSansBold
+    button.LayoutOrder = layoutOrder
+    button.Parent = scrollFrame
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = button
+
+    button.MouseButton1Click:Connect(function()
+        safeInvoke(productId, "Product")
+    end)
+end
+
+-- ================= СПИСОК ТОВАРОВ =================
+createBuyButton("Купить Драконий Якорь", Color3.fromRGB(230, 75, 75), 1109792341, 1)
+createBuyButton("Купить Новогодний Гарпуны", Color3.fromRGB(75, 130, 230), 915766549, 2)
+createBuyButton("Купить Печеньковые Колеса", Color3.fromRGB(210, 130, 60), 1126385328, 3)
+createBuyButton("Купить Яичные Пушки", Color3.fromRGB(46, 184, 114), 1161573715, 4)
+createBuyButton("Купить Реактивные Турбины", Color3.fromRGB(0, 162, 232), 424770683, 5)
