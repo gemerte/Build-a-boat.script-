@@ -10,7 +10,7 @@
 --		██║░░░░░██║██████╔╝╚█████╔╝██║░░██║██║░░██║██████╔╝		--		
 --		╚═╝░░░░░╚═╝╚═════╝░░╚════╝░╚═╝░░╚═╝╚═╝░░╚═╝╚═════╝░		--		
 
-
+-- Its my work)
 
 print("
                                                                                                                         
@@ -70,7 +70,92 @@ PPPPPPPPPP                UUUUUUUUU      PPPPPPPPPP           SSSSSSSSSSSSSSS   
 
 
 
--- Obsidian UI + Visual Pack + Smart Auto Farm
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- BaBfT Manager | FOX v3 | Obsidian UI + Visual Pack + Smart Auto Farm + Pine Tree Shop
 
 local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
 local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
@@ -117,6 +202,7 @@ local ContentProvider = game:GetService("ContentProvider")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
 
 -- ===================== DEFAULT LIGHTING =====================
 local defaultLighting = {
@@ -1371,6 +1457,7 @@ local MainTab = Window:AddTab("Main", "home")
 local CombatTab = Window:AddTab("Combat", "swords")
 local MoveTab = Window:AddTab("Movement", "move")
 local FarmTab = Window:AddTab("Farm", "coins")
+local ShopTab = Window:AddTab("Shop", "shopping-cart")
 local VisualTab = Window:AddTab("Visual", "palette")
 local WorldTab = Window:AddTab("World", "globe")
 local UISettingsTab = Window:AddTab("Settings", "settings")
@@ -1390,7 +1477,7 @@ InfoGroup:AddButton("Respawn", function()
     if hum then hum.Health = 0 end
 end)
 InfoGroup:AddButton("Rejoin", function()
-    game:GetService("TeleportService"):Teleport(game.PlaceId, player)
+    TeleportService:Teleport(game.PlaceId, player)
 end)
 InfoGroup:AddToggle("AntiAFK", {
     Text = "Anti-AFK",
@@ -1683,6 +1770,123 @@ ESPBox:AddToggle("StageESP", {
         end
     end,
 })
+
+-- ===================== SHOP TAB =====================
+local ShopBox = ShopTab:AddLeftGroupbox("Shop Purchases")
+
+ShopBox:AddButton("Dragon Harpoon", function()
+    pcall(function() workspace.PromptRobuxEvent:InvokeServer(1109792341, "Product") end)
+    Library:Notify("Dragon Harpoon", 2)
+end)
+ShopBox:AddButton("Cookie Wheels", function()
+    pcall(function() workspace.PromptRobuxEvent:InvokeServer(1126385328, "Product") end)
+    Library:Notify("Cookie Wheels", 2)
+end)
+ShopBox:AddButton("Orange Mega Turbines", function()
+    pcall(function() workspace.PromptRobuxEvent:InvokeServer(139121474, "Product") end)
+    Library:Notify("Mega Turbines", 2)
+end)
+
+local PineBox = ShopTab:AddRightGroupbox("Pine Tree")
+
+PineBox:AddButton("Buy Pine Tree x1", function()
+    pcall(function() workspace.ItemBoughtFromShop:InvokeServer("PineTree", 1) end)
+    Library:Notify("Bought 1x Pine Tree", 2)
+end)
+
+PineBox:AddButton("Buy Pine Tree x5", function()
+    task.spawn(function()
+        for i = 1, 5 do
+            pcall(function() workspace.ItemBoughtFromShop:InvokeServer("PineTree", 1) end)
+            task.wait(0.05)
+        end
+        Library:Notify("Bought 5x Pine Tree", 2)
+    end)
+end)
+
+PineBox:AddButton("Buy Pine Tree x25", function()
+    task.spawn(function()
+        for i = 1, 25 do
+            pcall(function() workspace.ItemBoughtFromShop:InvokeServer("PineTree", 1) end)
+            task.wait(0.05)
+        end
+        Library:Notify("Bought 25x Pine Tree", 2)
+    end)
+end)
+
+PineBox:AddSlider("PineAmount", {
+    Text = "Custom Amount",
+    Default = 50, Min = 1, Max = 500, Rounding = 0,
+    Callback = function(v) end,
+})
+
+PineBox:AddButton("Buy Pine Tree (Custom)", function()
+    local amt = Options.PineAmount and Options.PineAmount.Value or 50
+    amt = math.clamp(math.floor(amt), 1, 500)
+    Library:Notify("Buying " .. amt .. "x Pine Tree...", 2)
+    task.spawn(function()
+        for i = 1, amt do
+            pcall(function() workspace.ItemBoughtFromShop:InvokeServer("PineTree", 1) end)
+            task.wait(0.05)
+        end
+        Library:Notify("Done! " .. amt .. "x Pine Tree", 3)
+    end)
+end)
+
+PineBox:AddToggle("PineAutoBuy", {
+    Text = "Auto Buy Pine Tree",
+    Default = false,
+    Callback = function(v)
+        if v then
+            task.spawn(function()
+                local bought = 0
+                while Toggles.PineAutoBuy and Toggles.PineAutoBuy.Value do
+                    pcall(function() workspace.ItemBoughtFromShop:InvokeServer("PineTree", 1) end)
+                    bought = bought + 1
+                    if bought % 20 == 0 then
+                        Library:Notify("Auto Pine Tree: " .. bought, 1)
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end,
+})
+
+local TPortBox = ShopTab:AddLeftGroupbox("Teleports")
+TPortBox:AddButton("Easter Event Place", function()
+    TeleportService:Teleport(1930863474)
+end)
+TPortBox:AddButton("Christmas Event Place", function()
+    TeleportService:Teleport(1930866268)
+end)
+TPortBox:AddButton("Test Place", function()
+    TeleportService:Teleport(1930665568)
+end)
+
+local DupeBox = ShopTab:AddRightGroupbox("Dupe Build")
+DupeBox:AddSlider("DupeAmount", {
+    Text = "Dupe Amount",
+    Default = 10, Min = 1, Max = 50, Rounding = 0,
+    Callback = function(v) end,
+})
+DupeBox:AddSlider("DupeSlot", {
+    Text = "Slot",
+    Default = 42, Min = 1, Max = 99, Rounding = 0,
+    Callback = function(v) end,
+})
+DupeBox:AddButton("Dupe Build", function()
+    local dupe = Options.DupeAmount and Options.DupeAmount.Value or 10
+    local slot = Options.DupeSlot and Options.DupeSlot.Value or 42
+    Library:Notify("Duping " .. dupe .. "x from slot " .. slot, 2)
+    task.spawn(function()
+        for i = 1, dupe do
+            pcall(function() workspace.LoadBoatData:FireServer(slot, 0) end)
+            task.wait(0.05)
+        end
+        Library:Notify("Dupe done! " .. dupe .. "x loaded", 3)
+    end)
+end)
 
 -- ===================== VISUAL TAB =====================
 local HatGroupBox = VisualTab:AddLeftGroupbox("Chinese Hat")
@@ -2013,7 +2217,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- статус фарма в консоль
 task.spawn(function()
     local last = ""
     while task.wait(1) do
