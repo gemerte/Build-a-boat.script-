@@ -192,6 +192,40 @@ local VirtualUser = game:GetService("VirtualUser")
 local TweenService = game:GetService("TweenService")
 local TeleportService = game:GetService("TeleportService")
 
+local HttpService = game:GetService("HttpService")
+local httpRequest = request or http_request or (syn and syn.request)
+local API_URL = "http://127.0.0.1:8000"
+local sessionCode = "FOX-" .. math.random(1000, 9999)
+
+if httpRequest then
+    print("========================================")
+    print("🔑 КОД ДЛЯ ТЕЛЕГРАМ БОТА: " .. sessionCode)
+    print("Введи в боте: /connect " .. sessionCode)
+    print("========================================")
+else
+    print("[BRIDGE] ❌ Executor не поддерживает HTTP. Мост не запустится.")
+end
+-- ===================== HTTP BRIDGE REGISTRATION =====================
+task.spawn(function()
+    pcall(function()
+        if httpRequest then
+            httpRequest({
+                Url = API_URL .. "/api/connect",
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HttpService:JSONEncode({
+                    code = sessionCode,
+                    username = player.Name,
+                    game = "Build a Boat",
+                    gold = getGold(),
+                    inventory = getInventory()
+                })
+            })
+            print("[BRIDGE] ✅ Зарегистрировано в боте!")
+        end
+    end)
+end)
+
 -- ===================== DEFAULT LIGHTING =====================
 local defaultLighting = {
     Brightness = Lighting.Brightness,
@@ -226,323 +260,35 @@ local BTB = {
     JumpConn = nil,
     NoclipConn = nil,
 }
-
--- ===================== SMART FARM SYSTEM =====================
-local FarmSystem = {
-    Enabled = false,
-    Mode = "Stages",
-    StageDelay = 1.2,
-    MoveSpeed = 70,
-    CollectRadius = 45,
-    HeightOffset = 8,
-    LookAhead = true,
-    AutoRebuild = false,
-    CurrentStage = 0,
-    TotalStages = 0,
-    Status = "Idle",
-    Stages = {},
-}
-
-local function Farm_ScanStages()
-    local stages = {}
-    local seen = {}
-
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and obj.Size.Magnitude > 5 then
-            local n = obj.Name:lower()
-            if n:find("stage") or n:find("checkpoint") or n:find("island")
-                or n:find("platform") or n:find("block") or n:find("land") then
-                local key = string.format("%.0f_%.0f", obj.Position.X / 20, obj.Position.Z / 20)
-                if not seen[key] then
-                    seen[key] = true
-                    table.insert(stages, {
-                        Part = obj,
-                        Pos = obj.Position + Vector3.new(0, FarmSystem.HeightOffset, 0),
-                        Z = obj.Position.Z,
-                        Name = obj.Name,
-                    })
-                end
+-- ===================== HTTP BRIDGE HELPERS =====================
+local function getGold()
+    local ls = player:FindFirstChild("leaderstats")
+    if ls then
+        for _, stat in ipairs(ls:GetChildren()) do
+            local n = stat.Name:lower()
+            if n:find("gold") or n:find("money") or n:find("honey") or n:find("cash") or n:find("coins") then
+                return stat.Value
             end
         end
     end
-
-    if #stages < 5 then
-        stages = {}
-        local startZ = 0
-        local endZ = 4000
-        local step = 80
-        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        local baseX = hrp and hrp.Position.X or 0
-        local baseY = (hrp and hrp.Position.Y or 20) + FarmSystem.HeightOffset
-
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj:IsA("BasePart") then
-                local n = obj.Name:lower()
-                if n:find("end") or n:find("finish") or n:find("goal") or n:find("treasure") then
-                    if obj.Position.Z > endZ then endZ = obj.Position.Z + 50 end
-                end
-                if obj.Position.Z > endZ then endZ = obj.Position.Z end
-            end
-        end
-
-        for z = startZ, endZ, step do
-            table.insert(stages, {
-                Part = nil,
-                Pos = Vector3.new(baseX, baseY, z),
-                Z = z,
-                Name = "Waypoint_" .. tostring(math.floor(z)),
-            })
-        end
-    end
-
-    table.sort(stages, function(a, b) return a.Z < b.Z end)
-
-    local cleaned = {}
-    local lastZ = -99999
-    for _, s in ipairs(stages) do
-        if s.Z - lastZ >= 40 then
-            table.insert(cleaned, s)
-            lastZ = s.Z
-        end
-    end
-
-    FarmSystem.Stages = cleaned
-    FarmSystem.TotalStages = #cleaned
-    FarmSystem.CurrentStage = 0
-    return cleaned
+    return 0
 end
 
-local function Farm_TweenTo(targetPos, duration)
-    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return false end
-
-    duration = duration or math.clamp((hrp.Position - targetPos).Magnitude / FarmSystem.MoveSpeed, 0.4, 4)
-
-    if FarmSystem.LookAhead then
-        local look = CFrame.lookAt(hrp.Position, Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z))
-        hrp.CFrame = CFrame.new(hrp.Position) * (look - look.Position)
-    end
-
-    local tween = TweenService:Create(hrp, TweenInfo.new(
-        duration,
-        Enum.EasingStyle.Quad,
-        Enum.EasingDirection.InOut
-    ), {
-        CFrame = CFrame.new(targetPos)
-    })
-
-    local wasAnchored = hrp.Anchored
-    hrp.Anchored = true
-    tween:Play()
-    tween.Completed:Wait()
-    hrp.Anchored = wasAnchored
-    return true
-end
-
-local function Farm_CollectNearby()
-    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return 0 end
-
-    local collected = 0
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            local n = obj.Name:lower()
-            if n:find("gold") or n:find("coin") or n:find("treasure") or n:find("reward") or n:find("gem") then
-                local dist = (obj.Position - hrp.Position).Magnitude
-                if dist <= FarmSystem.CollectRadius then
-                    if dist > 8 then
-                        local mid = hrp.Position:Lerp(obj.Position + Vector3.new(0, 3, 0), 0.7)
-                        Farm_TweenTo(mid, 0.35)
-                    end
-                    pcall(function()
-                        firetouchinterest(hrp, obj, 0)
-                        task.wait(0.05)
-                        firetouchinterest(hrp, obj, 1)
-                    end)
-                    pcall(function()
-                        if obj.Parent and obj.Parent:IsA("Tool") then
-                            obj.Parent.Parent = player.Backpack
-                        end
-                    end)
-                    collected = collected + 1
-                    task.wait(0.08)
-                end
+local function getInventory()
+    local inv = {}
+    pcall(function()
+        for _, tool in ipairs(player.Backpack:GetChildren()) do
+            inv[tool.Name] = (inv[tool.Name] or 0) + 1
+        end
+        if player.Character then
+            for _, tool in ipairs(player.Character:GetChildren()) do
+                if tool:IsA("Tool") then inv[tool.Name] = (inv[tool.Name] or 0) + 1 end
             end
         end
-    end
-    return collected
-end
-
-local function Farm_DoStage(index)
-    local stage = FarmSystem.Stages[index]
-    if not stage then return false end
-
-    FarmSystem.CurrentStage = index
-    FarmSystem.Status = string.format("Stage %d/%d — %s", index, FarmSystem.TotalStages, stage.Name)
-
-    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        local origin = Vector3.new(stage.Pos.X, stage.Pos.Y + 50, stage.Pos.Z)
-        local ray = workspace:Raycast(origin, Vector3.new(0, -200, 0))
-        if ray then
-            stage.Pos = Vector3.new(stage.Pos.X, ray.Position.Y + FarmSystem.HeightOffset, stage.Pos.Z)
-        end
-    end
-
-    Farm_TweenTo(stage.Pos)
-    task.wait(0.15)
-    local got = Farm_CollectNearby()
-    FarmSystem.Status = string.format("Stage %d/%d | +%d gold", index, FarmSystem.TotalStages, got)
-    task.wait(FarmSystem.StageDelay)
-    return true
-end
-
-local function Farm_GoFinish()
-    FarmSystem.Status = "Going to finish..."
-    local best, maxZ = nil, -math.huge
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            local n = obj.Name:lower()
-            if n:find("end") or n:find("finish") or n:find("goal") or n:find("treasure") then
-                if obj.Position.Z > maxZ then
-                    maxZ = obj.Position.Z
-                    best = obj
-                end
-            end
-        end
-    end
-    if best then
-        Farm_TweenTo(best.Position + Vector3.new(0, FarmSystem.HeightOffset, 0), 1.5)
-        Farm_CollectNearby()
-        FarmSystem.Status = "Finish reached!"
-        Library:Notify("Финиш! Золото собрано", 3)
-        return true
-    end
-    if #FarmSystem.Stages > 0 then
-        local last = FarmSystem.Stages[#FarmSystem.Stages]
-        Farm_TweenTo(last.Pos + Vector3.new(0, 0, 100), 1.5)
-        FarmSystem.Status = "End of path"
-    end
-    return false
-end
-
-local function Farm_Stop()
-    FarmSystem.Enabled = false
-    FarmSystem.Status = "Stopped"
-end
-
-local function Farm_Start()
-    if FarmSystem.Enabled then return end
-    FarmSystem.Enabled = true
-    FarmSystem.Status = "Scanning map..."
-
-    local stages = Farm_ScanStages()
-    if #stages == 0 then
-        FarmSystem.Status = "No stages found"
-        FarmSystem.Enabled = false
-        Library:Notify("Этапы не найдены", 3)
-        return
-    end
-
-    Library:Notify(string.format("Найдено %d точек. Старт!", #stages), 3)
-    FarmSystem.Status = string.format("Running 0/%d", #stages)
-
-    task.spawn(function()
-        while FarmSystem.Enabled do
-            if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
-                FarmSystem.Status = "Waiting respawn..."
-                player.CharacterAdded:Wait()
-                task.wait(1.5)
-            end
-
-            for i = 1, #FarmSystem.Stages do
-                if not FarmSystem.Enabled then break end
-                pcall(function() Farm_DoStage(i) end)
-            end
-
-            if not FarmSystem.Enabled then break end
-
-            pcall(Farm_GoFinish)
-            task.wait(1)
-
-            if FarmSystem.AutoRebuild then
-                FarmSystem.Status = "Rebuilding..."
-                local hum = player.Character and player.Character:FindFirstChild("Humanoid")
-                if hum then hum.Health = 0 end
-                player.CharacterAdded:Wait()
-                task.wait(2)
-                Farm_ScanStages()
-            else
-                FarmSystem.Status = "Done!"
-                FarmSystem.Enabled = false
-                if Toggles.SmartFarm then pcall(function() Toggles.SmartFarm:SetValue(false) end) end
-                break
-            end
-        end
-        if not FarmSystem.Enabled then FarmSystem.Status = "Idle" end
+        inv["WoodBlock"] = 100
+        inv["PlasticBlock"] = 50
     end)
-end
-
-local function Farm_StartSmooth()
-    if FarmSystem.Enabled then return end
-    FarmSystem.Enabled = true
-    FarmSystem.Status = "Smooth farm..."
-
-    task.spawn(function()
-        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp then FarmSystem.Enabled = false return end
-
-        local startZ = hrp.Position.Z
-        local targetZ = startZ + 5000
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj:IsA("BasePart") then
-                local n = obj.Name:lower()
-                if (n:find("end") or n:find("finish")) and obj.Position.Z > targetZ then
-                    targetZ = obj.Position.Z + 30
-                end
-            end
-        end
-
-        local z = startZ
-        local step = 25
-        while FarmSystem.Enabled and z < targetZ do
-            hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-            if not hrp then
-                player.CharacterAdded:Wait()
-                task.wait(1)
-                hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-            end
-            if not hrp then break end
-
-            z = z + step
-            local pos = Vector3.new(hrp.Position.X, hrp.Position.Y, z)
-            local ray = workspace:Raycast(Vector3.new(pos.X, pos.Y + 80, pos.Z), Vector3.new(0, -250, 0))
-            if ray then
-                pos = Vector3.new(pos.X, ray.Position.Y + FarmSystem.HeightOffset, pos.Z)
-            end
-
-            Farm_TweenTo(pos, step / FarmSystem.MoveSpeed)
-            Farm_CollectNearby()
-            FarmSystem.Status = string.format("Smooth Z=%.0f / %.0f", z, targetZ)
-            task.wait(0.05)
-        end
-
-        if FarmSystem.Enabled then
-            pcall(Farm_GoFinish)
-            if FarmSystem.AutoRebuild then
-                local hum = player.Character and player.Character:FindFirstChild("Humanoid")
-                if hum then hum.Health = 0 end
-                player.CharacterAdded:Wait()
-                task.wait(2)
-                FarmSystem.Enabled = false
-                Farm_StartSmooth()
-                return
-            end
-        end
-        FarmSystem.Enabled = false
-        FarmSystem.Status = "Idle"
-        if Toggles.SmartFarm then pcall(function() Toggles.SmartFarm:SetValue(false) end) end
-    end)
+    return inv
 end
 
 -- ===================== AURA MODELS =====================
@@ -1580,184 +1326,40 @@ MoveBox:AddToggle("InfJump", {
 })
 
 -- ===================== FARM TAB =====================
-local FarmBox = FarmTab:AddLeftGroupbox("Smart Auto Farm")
+local FarmBox = FarmTab:AddLeftGroupbox("Auto Farm (CFrame Points)")
 
 FarmBox:AddToggle("SmartFarm", {
-    Text = "Enable Smart Farm",
+    Text = "Enable Auto Farm",
     Default = false,
     Callback = function(v)
+        autoFarmActive = v
         if v then
-            if FarmSystem.Mode == "Smooth" then
-                Farm_StartSmooth()
-            else
-                Farm_Start()
-            end
+            task.spawn(loopAutoFarm)
         else
-            Farm_Stop()
+            removePlatform()
+            farmStatusText = "Stopped"
         end
     end,
 })
 
-FarmBox:AddDropdown("FarmMode", {
-    Values = { "Stages", "Smooth" },
-    Default = "Stages",
-    Text = "Farm Mode",
-    Callback = function(v)
-        FarmSystem.Mode = v
-        if FarmSystem.Enabled then
-            Farm_Stop()
-            task.wait(0.3)
-            if Toggles.SmartFarm then Toggles.SmartFarm:SetValue(true) end
-        end
-    end,
+FarmBox:AddSlider("FarmSpeed", {
+    Text = "Speed (sec between points)",
+    Default = 1, Min = 0.1, Max = 3, Rounding = 1,
+    Callback = function(v) farmSpeed = v end,
 })
 
-FarmBox:AddSlider("FarmMoveSpeed", {
-    Text = "Move Speed",
-    Default = 70, Min = 20, Max = 200, Rounding = 0,
-    Callback = function(v) FarmSystem.MoveSpeed = v end,
+FarmBox:AddSlider("DieAtStage", {
+    Text = "Die at Stage (11 = finish)",
+    Default = 11, Min = 0, Max = 11, Rounding = 0,
+    Callback = function(v) dieAtStage = v end,
 })
-
-FarmBox:AddSlider("FarmStageDelay", {
-    Text = "Stage Delay (sec)",
-    Default = 1.2, Min = 0.2, Max = 5, Rounding = 1,
-    Callback = function(v) FarmSystem.StageDelay = v end,
-})
-
-FarmBox:AddSlider("FarmCollectRadius", {
-    Text = "Collect Radius",
-    Default = 45, Min = 10, Max = 120, Rounding = 0,
-    Callback = function(v) FarmSystem.CollectRadius = v end,
-})
-
-FarmBox:AddSlider("FarmHeight", {
-    Text = "Height Offset",
-    Default = 8, Min = 2, Max = 30, Rounding = 0,
-    Callback = function(v) FarmSystem.HeightOffset = v end,
-})
-
-FarmBox:AddToggle("FarmLookAhead", {
-    Text = "Look Ahead",
-    Default = true,
-    Callback = function(v) FarmSystem.LookAhead = v end,
-})
-
-FarmBox:AddToggle("FarmAutoRebuild", {
-    Text = "Auto Rebuild (loop)",
-    Default = false,
-    Callback = function(v) FarmSystem.AutoRebuild = v end,
-})
-
-FarmBox:AddDivider()
-FarmBox:AddButton("Rescan Stages", function()
-    local s = Farm_ScanStages()
-    Library:Notify("Найдено точек: " .. #s, 3)
-end)
 
 FarmBox:AddButton("Stop Farm", function()
-    Farm_Stop()
+    autoFarmActive = false
+    removePlatform()
     if Toggles.SmartFarm then Toggles.SmartFarm:SetValue(false) end
-    Library:Notify("Farm stopped", 2)
+    farmStatusText = "Stopped"
 end)
-
-local TPBox = FarmTab:AddRightGroupbox("Teleport")
-TPBox:AddButton("TP to Treasure", function()
-    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:IsA("BasePart") then
-                local n = obj.Name:lower()
-                if n:find("treasure") or n:find("chest") or n:find("gold") then
-                    Farm_TweenTo(obj.Position + Vector3.new(0, 5, 0), 0.8)
-                    Library:Notify("→ Treasure", 2)
-                    return
-                end
-            end
-        end
-        Library:Notify("Treasure not found", 2)
-    end
-end)
-
-TPBox:AddButton("TP to Finish", function()
-    Farm_GoFinish()
-end)
-
-TPBox:AddButton("TP Next Stage", function()
-    if #FarmSystem.Stages == 0 then Farm_ScanStages() end
-    local nextI = math.clamp(FarmSystem.CurrentStage + 1, 1, math.max(#FarmSystem.Stages, 1))
-    if FarmSystem.Stages[nextI] then
-        Farm_DoStage(nextI)
-        Library:Notify("Stage " .. nextI, 2)
-    end
-end)
-
-local ESPBox = FarmTab:AddRightGroupbox("ESP")
-ESPBox:AddToggle("TreasureESP", {
-    Text = "Treasure ESP",
-    Default = false,
-    Callback = function(v)
-        if v then
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj:IsA("BasePart") then
-                    local n = obj.Name:lower()
-                    if n:find("gold") or n:find("treasure") or n:find("chest") or n:find("coin") then
-                        if not obj:FindFirstChild("FoxESP") then
-                            local hl = Instance.new("Highlight")
-                            hl.Name = "FoxESP"
-                            hl.FillColor = Color3.fromRGB(130, 0, 255)
-                            hl.OutlineColor = Color3.new(1, 1, 1)
-                            hl.FillTransparency = 0.6
-                            hl.Parent = obj
-                        end
-                    end
-                end
-            end
-        else
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj:FindFirstChild("FoxESP") then obj.FoxESP:Destroy() end
-            end
-        end
-    end,
-})
-
-ESPBox:AddToggle("StageESP", {
-    Text = "Stage Waypoints ESP",
-    Default = false,
-    Callback = function(v)
-        for _, obj in pairs(workspace:GetChildren()) do
-            if obj.Name == "FoxStageMark" then obj:Destroy() end
-        end
-        if v then
-            if #FarmSystem.Stages == 0 then Farm_ScanStages() end
-            for i, stage in ipairs(FarmSystem.Stages) do
-                local p = Instance.new("Part")
-                p.Name = "FoxStageMark"
-                p.Anchored = true
-                p.CanCollide = false
-                p.Size = Vector3.new(4, 4, 4)
-                p.Shape = Enum.PartType.Ball
-                p.Material = Enum.Material.Neon
-                p.Color = Color3.fromRGB(130, 0, 255)
-                p.Transparency = 0.3
-                p.Position = stage.Pos
-                p.Parent = workspace
-                local bb = Instance.new("BillboardGui")
-                bb.Size = UDim2.new(0, 80, 0, 30)
-                bb.AlwaysOnTop = true
-                bb.Parent = p
-                local lbl = Instance.new("TextLabel")
-                lbl.Size = UDim2.new(1, 0, 1, 0)
-                lbl.BackgroundTransparency = 1
-                lbl.Text = "S" .. i
-                lbl.TextColor3 = Color3.new(1, 1, 1)
-                lbl.TextStrokeTransparency = 0.5
-                lbl.Font = Enum.Font.GothamBold
-                lbl.TextSize = 14
-                lbl.Parent = bb
-            end
-        end
-    end,
-})
 
 -- ===================== SHOP TAB =====================
 local ShopBox = ShopTab:AddLeftGroupbox("Shop Purchases")
@@ -2205,12 +1807,62 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+-- ===================== HTTP BRIDGE LOOP =====================
 task.spawn(function()
-    local last = ""
-    while task.wait(1) do
-        if FarmSystem.Status ~= last and FarmSystem.Status ~= "Idle" then
-            print("[FARM] " .. FarmSystem.Status)
-            last = FarmSystem.Status
+    while task.wait(2) do
+        pcall(function()
+            if not httpRequest then return end
+
+            -- 1. Обновляем данные
+            httpRequest({
+                Url = API_URL .. "/api/update",
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HttpService:JSONEncode({
+                    code = sessionCode,
+                    game = "Build a Boat",
+                    gold = getGold(),
+                    inventory = getInventory(),
+                    farm_status = farmStatusText,
+                    collected = chestsCollected
+                })
+            })
+
+            -- 2. Получаем команды из Telegram
+            local res = httpRequest({
+                Url = API_URL .. "/api/fetch_cmd/" .. sessionCode,
+                Method = "GET"
+            })
+
+            if res and res.Body then
+                local data = HttpService:JSONDecode(res.Body)
+
+                -- Управление фармом из Telegram
+                if data.farm_enabled ~= autoFarmActive then
+                    autoFarmActive = data.farm_enabled
+                    if Toggles.SmartFarm then
+                        pcall(function() Toggles.SmartFarm:SetValue(data.farm_enabled) end)
+                    end
+                    if data.farm_enabled then
+                        farmStatusText = "Starting from Telegram..."
+                        task.spawn(loopAutoFarm)
+                    else
+                        removePlatform()
+                        farmStatusText = "Stopped"
+                    end
+                end
+
+                if data.farm_speed and type(data.farm_speed) == "number" then
+                    farmSpeed = data.farm_speed
+                end
+
+                local cmd = data.command
+                if cmd and cmd:sub(1, 4) == "BUY_" then
+                    local itemName = cmd:sub(5)
+                    print("[BRIDGE] 🛒 Покупка из Telegram: " .. itemName)
+                    pcall(function() workspace.ItemBoughtFromShop:InvokeServer(itemName, 1) end)
+                end
+            end
         end
     end
 end)
@@ -2230,5 +1882,36 @@ end
 player.CharacterAdded:Connect(ReapplyVisuals_OnCharacterSpawned)
 if player.Character then ReapplyVisuals_OnCharacterSpawned(player.Character) end
 
+-- ===================== HTTP BRIDGE REGISTRATION =====================
+task.spawn(function()
+    pcall(function()
+        if httpRequest then
+            httpRequest({
+                Url = API_URL .. "/api/connect",
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HttpService:JSONEncode({
+                    code = sessionCode,
+                    username = player.Name,
+                    game = "Build a Boat",
+                    gold = getGold(),
+                    inventory = getInventory()
+                })
+            })
+            print("[BRIDGE] ✅ Зарегистрировано в боте!")
+        end
+    end)
+end)
+
+
+-- ===================== TELEGRAM CONNECTION STATUS =====================
+if httpRequest then
+    Library:Notify("BaBfT Manager loaded! Код: " .. sessionCode, 5)
+    print("[FOX] Telegram Bridge подключён | Код: " .. sessionCode)
+else
+    Library:Notify("BaBfT Manager loaded! (Bridge недоступен)", 3)
+end
 Library:Notify("BaBfT Manager loaded!", 3)
 print("[FOX] BaBfT Manager | Full script ready | RightShift = menu")
+
+
