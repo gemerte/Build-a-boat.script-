@@ -1,0 +1,3141 @@
+-- ПРИВЕТ МЕНЯ ЗОВУТ ДМИТРИЙ Я СОЗДАТЕЛЬ ДАННОГО СКРИПТА Я ЮЗАЮ ИИ ДЛЯ СОЗДАНИЯ СКРИПТОВ
+-- МОЙ ТГ: BongoS1n
+-- БЕТА 0.3
+-- UI: Noir | Build a Boat
+
+local Noir = (function()
+	local Players = game:GetService("Players")
+	local UIS = game:GetService("UserInputService")
+	local TweenService = game:GetService("TweenService")
+	local MarketplaceService = game:GetService("MarketplaceService")
+	local RunService = game:GetService("RunService")
+
+	local player = Players.LocalPlayer
+	local playerGui = player:WaitForChild("PlayerGui")
+
+	local T = {
+		Bg     = Color3.fromRGB(8, 8, 8),
+		Bar    = Color3.fromRGB(12, 12, 12),
+		Side   = Color3.fromRGB(10, 10, 10),
+		Elem   = Color3.fromRGB(18, 18, 18),
+		Hover  = Color3.fromRGB(28, 28, 28),
+		Press  = Color3.fromRGB(36, 36, 36),
+		Stroke = Color3.fromRGB(32, 32, 32),
+		Text   = Color3.fromRGB(235, 235, 235),
+		Sub    = Color3.fromRGB(140, 140, 140),
+		Accent = Color3.fromRGB(255, 255, 255),
+		MinW   = 380,
+		MinH   = 260,
+		BarH   = 38,
+		SideW  = 128,
+		Anim   = TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+	}
+
+	local Lib = {}
+
+	local function corner(inst, r)
+		local c = Instance.new("UICorner")
+		c.CornerRadius = UDim.new(0, r or 6)
+		c.Parent = inst
+		return c
+	end
+
+	local function stroke(inst, col, th)
+		local s = Instance.new("UIStroke")
+		s.Color = col or T.Stroke
+		s.Thickness = th or 1
+		s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		s.Parent = inst
+		return s
+	end
+
+	local function pad(inst, l, r, t, b)
+		local p = Instance.new("UIPadding")
+		p.PaddingLeft = UDim.new(0, l or 0)
+		p.PaddingRight = UDim.new(0, r or 0)
+		p.PaddingTop = UDim.new(0, t or 0)
+		p.PaddingBottom = UDim.new(0, b or 0)
+		p.Parent = inst
+		return p
+	end
+
+	local function tween(inst, props, info)
+		local tw = TweenService:Create(inst, info or T.Anim, props)
+		tw:Play()
+		return tw
+	end
+
+	local function runScript(src, extra)
+		if src == nil or src == "" then return end
+		extra = extra or {}
+		if type(src) == "function" then
+			task.spawn(src, extra.Value, extra)
+			return
+		end
+		if type(src) == "string" then
+			if not loadstring then return end
+			local code = extra.Value ~= nil and ("local Value = ...\n" .. src) or src
+			local fn, err = loadstring(code)
+			if not fn then
+				warn("[NOIR] SCRIPT error:", err)
+				return
+			end
+			task.spawn(fn, extra.Value)
+		end
+	end
+
+	local function hover(btn, from, to)
+		btn.MouseEnter:Connect(function()
+			tween(btn, { BackgroundColor3 = to }, TweenInfo.new(0.12))
+		end)
+		btn.MouseLeave:Connect(function()
+			tween(btn, { BackgroundColor3 = from }, TweenInfo.new(0.12))
+		end)
+	end
+
+	local function textBtn(parent, props)
+		local b = Instance.new("TextButton")
+		b.AutoButtonColor = false
+		b.Font = Enum.Font.GothamMedium
+		b.TextSize = props.TextSize or 13
+		b.TextColor3 = props.TextColor3 or T.Text
+		b.BackgroundColor3 = props.BackgroundColor3 or T.Elem
+		b.BorderSizePixel = 0
+		b.Text = props.Text or ""
+		b.Size = props.Size or UDim2.new(1, 0, 0, 32)
+		b.Position = props.Position or UDim2.new()
+		b.TextXAlignment = props.Align or Enum.TextXAlignment.Center
+		b.Parent = parent
+		if props.Corner then corner(b, props.Corner) end
+		return b
+	end
+
+	function Lib:CreateWindow(cfg)
+		cfg = cfg or {}
+		local initName = tostring(cfg.Name or cfg.name or "NOIR")
+		local initSize = cfg.Size or Vector2.new(560, 420)
+		local minSize = cfg.MinSize or Vector2.new(T.MinW, T.MinH)
+		if cfg.Accent then T.Accent = cfg.Accent end
+
+		local connections = {}
+		local function bind(sig, fn)
+			local c = sig:Connect(fn)
+			table.insert(connections, c)
+			return c
+		end
+
+		local gui = Instance.new("ScreenGui")
+		gui.Name = "NoirUI"
+		gui.ResetOnSpawn = false
+		gui.IgnoreGuiInset = true
+		gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+		gui.Parent = playerGui
+
+		local window = Instance.new("Frame")
+		window.Name = "Window"
+		window.Size = UDim2.fromOffset(initSize.X, initSize.Y)
+		window.Position = UDim2.new(0.5, -initSize.X / 2, 0.5, -initSize.Y / 2)
+		window.BackgroundColor3 = T.Bg
+		window.BorderSizePixel = 0
+		window.ClipsDescendants = true
+		window.Active = true
+		window.Parent = gui
+		corner(window, 8)
+		stroke(window, T.Stroke, 1)
+
+		local shadow = Instance.new("ImageLabel")
+		shadow.BackgroundTransparency = 1
+		shadow.Image = "rbxassetid://1316045217"
+		shadow.ImageColor3 = Color3.new(0, 0, 0)
+		shadow.ImageTransparency = 0.45
+		shadow.ScaleType = Enum.ScaleType.Slice
+		shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+		shadow.Size = UDim2.new(1, 40, 1, 40)
+		shadow.Position = UDim2.fromOffset(-20, -16)
+		shadow.ZIndex = 0
+		shadow.Parent = window
+
+		local bar = Instance.new("Frame")
+		bar.Name = "TitleBar"
+		bar.Size = UDim2.new(1, 0, 0, T.BarH)
+		bar.BackgroundColor3 = T.Bar
+		bar.BorderSizePixel = 0
+		bar.ZIndex = 5
+		bar.Parent = window
+		corner(bar, 8)
+
+		local barFix = Instance.new("Frame")
+		barFix.BackgroundColor3 = T.Bar
+		barFix.BorderSizePixel = 0
+		barFix.Size = UDim2.new(1, 0, 0, 12)
+		barFix.Position = UDim2.new(0, 0, 1, -12)
+		barFix.ZIndex = 5
+		barFix.Parent = bar
+
+		local accentLine = Instance.new("Frame")
+		accentLine.BackgroundColor3 = T.Accent
+		accentLine.BackgroundTransparency = 0.85
+		accentLine.BorderSizePixel = 0
+		accentLine.Size = UDim2.new(1, 0, 0, 1)
+		accentLine.Position = UDim2.new(0, 0, 1, 0)
+		accentLine.ZIndex = 6
+		accentLine.Parent = bar
+
+		local title = Instance.new("TextLabel")
+		title.BackgroundTransparency = 1
+		title.Size = UDim2.new(1, -120, 1, 0)
+		title.Position = UDim2.fromOffset(14, 0)
+		title.Font = Enum.Font.GothamBold
+		title.TextSize = 14
+		title.TextXAlignment = Enum.TextXAlignment.Left
+		title.TextColor3 = T.Text
+		title.Text = initName
+		title.ZIndex = 6
+		title.Parent = bar
+
+		local function winBtn(txt, xOff)
+			local b = Instance.new("TextButton")
+			b.AutoButtonColor = false
+			b.Size = UDim2.fromOffset(36, T.BarH)
+			b.Position = UDim2.new(1, xOff, 0, 0)
+			b.BackgroundColor3 = T.Bar
+			b.BorderSizePixel = 0
+			b.Text = txt
+			b.TextColor3 = T.Sub
+			b.Font = Enum.Font.GothamBold
+			b.TextSize = 14
+			b.ZIndex = 7
+			b.Parent = bar
+			b.MouseEnter:Connect(function()
+				b.BackgroundColor3 = (txt == "×") and Color3.fromRGB(180, 40, 40) or T.Hover
+				if txt == "×" then b.TextColor3 = Color3.new(1, 1, 1) end
+			end)
+			b.MouseLeave:Connect(function()
+				b.BackgroundColor3 = T.Bar
+				b.TextColor3 = T.Sub
+			end)
+			return b
+		end
+
+		local closeBtn = winBtn("×", -36)
+		local maxBtn   = winBtn("□", -72)
+		local minBtn   = winBtn("─", -108)
+
+		local body = Instance.new("Frame")
+		body.Name = "Body"
+		body.Size = UDim2.new(1, 0, 1, -T.BarH)
+		body.Position = UDim2.fromOffset(0, T.BarH)
+		body.BackgroundColor3 = T.Bg
+		body.BorderSizePixel = 0
+		body.ClipsDescendants = true
+		body.ZIndex = 2
+		body.Parent = window
+
+		local side = Instance.new("ScrollingFrame")
+		side.Name = "Tabs"
+		side.Size = UDim2.new(0, T.SideW, 1, 0)
+		side.BackgroundColor3 = T.Side
+		side.BorderSizePixel = 0
+		side.ScrollBarThickness = 2
+		side.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60)
+		side.CanvasSize = UDim2.new()
+		side.AutomaticCanvasSize = Enum.AutomaticSize.Y
+		side.Visible = false
+		side.ZIndex = 3
+		side.Parent = body
+		pad(side, 8, 8, 10, 10)
+
+		local sideLayout = Instance.new("UIListLayout")
+		sideLayout.Padding = UDim.new(0, 4)
+		sideLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		sideLayout.Parent = side
+
+		local sideLine = Instance.new("Frame")
+		sideLine.BackgroundColor3 = T.Stroke
+		sideLine.BorderSizePixel = 0
+		sideLine.Size = UDim2.new(0, 1, 1, 0)
+		sideLine.Position = UDim2.fromOffset(T.SideW, 0)
+		sideLine.Visible = false
+		sideLine.ZIndex = 3
+		sideLine.Parent = body
+
+		local pages = Instance.new("Frame")
+		pages.Name = "Pages"
+		pages.Size = UDim2.fromScale(1, 1)
+		pages.BackgroundColor3 = T.Bg
+		pages.BorderSizePixel = 0
+		pages.ClipsDescendants = true
+		pages.ZIndex = 2
+		pages.Parent = body
+
+		local emptyHint = Instance.new("TextLabel")
+		emptyHint.BackgroundTransparency = 1
+		emptyHint.Size = UDim2.fromScale(1, 1)
+		emptyHint.Font = Enum.Font.Gotham
+		emptyHint.TextSize = 13
+		emptyHint.TextColor3 = T.Sub
+		emptyHint.Text = ""
+		emptyHint.ZIndex = 2
+		emptyHint.Parent = pages
+
+		local toastHold = Instance.new("Frame")
+		toastHold.BackgroundTransparency = 1
+		toastHold.Size = UDim2.new(0, 260, 1, -20)
+		toastHold.Position = UDim2.new(1, -280, 0, 10)
+		toastHold.ZIndex = 80
+		toastHold.Parent = gui
+		local toastLay = Instance.new("UIListLayout")
+		toastLay.Padding = UDim.new(0, 6)
+		toastLay.HorizontalAlignment = Enum.HorizontalAlignment.Right
+		toastLay.Parent = toastHold
+
+		local minimized, maximized = false, false
+		local saved = { size = window.Size, pos = window.Position }
+		local dragging, dragStart, startPos = false, nil, nil
+		local resizing, resizeDir, resizeStart, resizeSize, resizePos = false, nil, nil, nil, nil
+
+		local function viewport()
+			return workspace.CurrentCamera.ViewportSize
+		end
+
+		bind(bar.InputBegan, function(input)
+			if maximized then return end
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = true
+				dragStart = input.Position
+				startPos = window.Position
+			end
+		end)
+
+		bind(UIS.InputEnded, function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = false
+				resizing = false
+			end
+		end)
+
+		bind(UIS.InputChanged, function(input)
+			if not (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+				return
+			end
+			if dragging and not resizing and not maximized then
+				local d = input.Position - dragStart
+				window.Position = UDim2.fromOffset(startPos.X.Offset + d.X, startPos.Y.Offset + d.Y)
+			elseif resizing and not minimized then
+				local d = input.Position - resizeStart
+				local w, h = resizeSize.X, resizeSize.Y
+				local px, py = resizePos.X.Offset, resizePos.Y.Offset
+				local dir = resizeDir
+				if dir:find("E") then w = resizeSize.X + d.X end
+				if dir:find("S") then h = resizeSize.Y + d.Y end
+				if dir:find("W") then
+					w = resizeSize.X - d.X
+					px = resizePos.X.Offset + d.X
+				end
+				if dir:find("N") then
+					h = resizeSize.Y - d.Y
+					py = resizePos.Y.Offset + d.Y
+				end
+				w = math.max(minSize.X, w)
+				h = math.max(minimized and T.BarH or minSize.Y, h)
+				if dir:find("W") and w == minSize.X then
+					px = resizePos.X.Offset + (resizeSize.X - minSize.X)
+				end
+				if dir:find("N") and h == (minimized and T.BarH or minSize.Y) then
+					py = resizePos.Y.Offset + (resizeSize.Y - h)
+				end
+				window.Size = UDim2.fromOffset(w, h)
+				window.Position = UDim2.fromOffset(px, py)
+			end
+		end)
+
+		local handles = {}
+		local function makeHandle(name, size, pos, dir)
+			local h = Instance.new("TextButton")
+			h.Name = "H_" .. name
+			h.Text = ""
+			h.BackgroundTransparency = 1
+			h.AutoButtonColor = false
+			h.Size = size
+			h.Position = pos
+			h.ZIndex = 20
+			h.Parent = window
+			handles[name] = h
+			bind(h.InputBegan, function(input)
+				if minimized or maximized then return end
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					resizing = true
+					resizeDir = dir
+					resizeStart = input.Position
+					resizeSize = window.AbsoluteSize
+					resizePos = window.Position
+					dragging = false
+				end
+			end)
+		end
+
+		local HS = 8
+		makeHandle("E",  UDim2.new(0, HS, 1, -HS * 2), UDim2.new(1, -HS / 2, 0, HS), "E")
+		makeHandle("W",  UDim2.new(0, HS, 1, -HS * 2), UDim2.new(0, -HS / 2, 0, HS), "W")
+		makeHandle("S",  UDim2.new(1, -HS * 2, 0, HS), UDim2.new(0, HS, 1, -HS / 2), "S")
+		makeHandle("N",  UDim2.new(1, -HS * 2, 0, HS), UDim2.new(0, HS, 0, -HS / 2), "N")
+		makeHandle("SE", UDim2.fromOffset(14, 14), UDim2.new(1, -7, 1, -7), "SE")
+		makeHandle("SW", UDim2.fromOffset(14, 14), UDim2.new(0, -7, 1, -7), "SW")
+		makeHandle("NE", UDim2.fromOffset(14, 14), UDim2.new(1, -7, 0, -7), "NE")
+		makeHandle("NW", UDim2.fromOffset(14, 14), UDim2.new(0, -7, 0, -7), "NW")
+
+		local function setHandles(vis)
+			for _, h in pairs(handles) do
+				h.Visible = vis
+			end
+		end
+
+		local function setMinimized(state)
+			if state == minimized then return end
+			minimized = state
+			if minimized then
+				if not maximized then
+					saved.size = window.Size
+					saved.pos = window.Position
+				end
+				tween(window, { Size = UDim2.fromOffset(window.AbsoluteSize.X, T.BarH) })
+				task.delay(0.18, function()
+					if minimized then body.Visible = false end
+				end)
+				minBtn.Text = "▢"
+				setHandles(false)
+			else
+				body.Visible = true
+				local target = maximized and UDim2.fromOffset(viewport().X, viewport().Y) or saved.size
+				tween(window, { Size = target })
+				minBtn.Text = "─"
+				setHandles(not maximized)
+			end
+		end
+
+		local function setMaximized(state)
+			if minimized then setMinimized(false) end
+			maximized = state
+			if maximized then
+				saved.size = window.Size
+				saved.pos = window.Position
+				tween(window, {
+					Size = UDim2.fromOffset(viewport().X, viewport().Y),
+					Position = UDim2.fromOffset(0, 0),
+				})
+				maxBtn.Text = "❐"
+				setHandles(false)
+			else
+				tween(window, { Size = saved.size, Position = saved.pos })
+				maxBtn.Text = "□"
+				setHandles(true)
+			end
+		end
+
+		bind(minBtn.MouseButton1Click, function()
+			setMinimized(not minimized)
+		end)
+		bind(maxBtn.MouseButton1Click, function()
+			setMaximized(not maximized)
+		end)
+		bind(closeBtn.MouseButton1Click, function()
+			gui.Enabled = false
+		end)
+
+		local lastClick = 0
+		bind(bar.InputBegan, function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+				local now = os.clock()
+				if now - lastClick < 0.28 then
+					setMaximized(not maximized)
+				end
+				lastClick = now
+			end
+		end)
+
+		local tabs = {}
+		local WindowApi = {}
+		local onUnload = {}
+
+		function WindowApi:OnUnload(fn)
+			table.insert(onUnload, fn)
+		end
+
+		local function showSidebar()
+			if side.Visible then return end
+			side.Visible = true
+			sideLine.Visible = true
+			emptyHint.Visible = false
+			pages.Size = UDim2.new(1, -T.SideW - 1, 1, 0)
+			pages.Position = UDim2.fromOffset(T.SideW + 1, 0)
+		end
+
+		local function makePage()
+			local page = Instance.new("ScrollingFrame")
+			page.BackgroundTransparency = 1
+			page.Size = UDim2.fromScale(1, 1)
+			page.BorderSizePixel = 0
+			page.ScrollBarThickness = 3
+			page.ScrollBarImageColor3 = Color3.fromRGB(70, 70, 70)
+			page.CanvasSize = UDim2.new()
+			page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+			page.Visible = false
+			page.ZIndex = 3
+			page.Parent = pages
+			pad(page, 14, 14, 12, 16)
+			local lay = Instance.new("UIListLayout")
+			lay.Padding = UDim.new(0, 8)
+			lay.SortOrder = Enum.SortOrder.LayoutOrder
+			lay.Parent = page
+			return page
+		end
+
+		local function widgetFrame(page, h)
+			local f = Instance.new("Frame")
+			f.BackgroundColor3 = T.Elem
+			f.BorderSizePixel = 0
+			f.Size = UDim2.new(1, 0, 0, h or 40)
+			f.ZIndex = 4
+			f.Parent = page
+			corner(f, 6)
+			stroke(f, Color3.fromRGB(26, 26, 26), 1)
+			return f
+		end
+
+		local function nameLabel(parent, txt, w)
+			local l = Instance.new("TextLabel")
+			l.BackgroundTransparency = 1
+			l.Size = UDim2.new(w or 0.55, 0, 1, 0)
+			l.Position = UDim2.fromOffset(12, 0)
+			l.Font = Enum.Font.GothamMedium
+			l.TextSize = 13
+			l.TextColor3 = T.Text
+			l.TextXAlignment = Enum.TextXAlignment.Left
+			l.TextTruncate = Enum.TextTruncate.AtEnd
+			l.Text = txt
+			l.ZIndex = 5
+			l.Parent = parent
+			return l
+		end
+
+		function WindowApi:Notify(text, dur)
+			local f = Instance.new("TextLabel")
+			f.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+			f.Size = UDim2.new(1, 0, 0, 36)
+			f.Font = Enum.Font.GothamMedium
+			f.TextSize = 12
+			f.TextColor3 = T.Text
+			f.Text = "  " .. tostring(text)
+			f.TextXAlignment = Enum.TextXAlignment.Left
+			f.ZIndex = 81
+			f.Parent = toastHold
+			corner(f, 6)
+			stroke(f, T.Stroke, 1)
+			task.delay(dur or 2.5, function()
+				tween(f, { BackgroundTransparency = 1, TextTransparency = 1 }, TweenInfo.new(0.2))
+				task.wait(0.2)
+				f:Destroy()
+			end)
+		end
+
+		function WindowApi:Tab(tabName)
+			if type(tabName) == "table" then
+				tabName = tabName.Name or tabName.name or "Tab"
+			end
+			tabName = tabName or "Tab"
+			showSidebar()
+
+			local tabBtn = textBtn(side, {
+				Text = tabName,
+				Size = UDim2.new(1, 0, 0, 32),
+				BackgroundColor3 = T.Side,
+				Corner = 6,
+				Align = Enum.TextXAlignment.Left,
+			})
+			tabBtn.TextColor3 = T.Sub
+			pad(tabBtn, 10, 8, 0, 0)
+			tabBtn.ZIndex = 4
+
+			local indicator = Instance.new("Frame")
+			indicator.BackgroundColor3 = T.Accent
+			indicator.BorderSizePixel = 0
+			indicator.Size = UDim2.new(0, 2, 0, 16)
+			indicator.Position = UDim2.new(0, 0, 0.5, -8)
+			indicator.Visible = false
+			indicator.ZIndex = 5
+			indicator.Parent = tabBtn
+
+			local page = makePage()
+			local tab = { Name = tabName, Button = tabBtn, Page = page, Indicator = indicator }
+
+			local function selectTab()
+				for _, t in ipairs(tabs) do
+					t.Page.Visible = false
+					t.Button.BackgroundColor3 = T.Side
+					t.Button.TextColor3 = T.Sub
+					t.Indicator.Visible = false
+				end
+				page.Visible = true
+				tabBtn.BackgroundColor3 = T.Elem
+				tabBtn.TextColor3 = T.Text
+				indicator.Visible = true
+			end
+
+			bind(tabBtn.MouseButton1Click, selectTab)
+			hover(tabBtn, T.Side, T.Hover)
+			table.insert(tabs, tab)
+			if #tabs == 1 then selectTab() end
+
+			local TabApi = {}
+
+			function TabApi:Label(opt)
+				opt = type(opt) == "table" and opt or { Name = tostring(opt) }
+				local f = widgetFrame(page, opt.Height or 28)
+				f.BackgroundTransparency = 1
+				local st = f:FindFirstChildOfClass("UIStroke")
+				if st then st:Destroy() end
+				local l = nameLabel(f, opt.Name or opt.Text or "", 1)
+				l.TextColor3 = opt.Color or T.Sub
+				l.Position = UDim2.fromOffset(4, 0)
+				return l
+			end
+
+			function TabApi:Separator()
+				local f = Instance.new("Frame")
+				f.BackgroundTransparency = 1
+				f.Size = UDim2.new(1, 0, 0, 10)
+				f.Parent = page
+				local line = Instance.new("Frame")
+				line.BackgroundColor3 = T.Stroke
+				line.BorderSizePixel = 0
+				line.Size = UDim2.new(1, 0, 0, 1)
+				line.Position = UDim2.new(0, 0, 0.5, 0)
+				line.Parent = f
+				return f
+			end
+
+			function TabApi:Button(opt)
+				opt = opt or {}
+				local f = widgetFrame(page, 40)
+				local b = textBtn(f, {
+					Text = opt.Name or "Button",
+					Size = UDim2.new(1, -16, 1, -10),
+					Position = UDim2.fromOffset(8, 5),
+					BackgroundColor3 = Color3.fromRGB(24, 24, 24),
+					Corner = 5,
+				})
+				b.ZIndex = 5
+				stroke(b, Color3.fromRGB(40, 40, 40), 1)
+				hover(b, Color3.fromRGB(24, 24, 24), T.Hover)
+				bind(b.MouseButton1Click, function()
+					tween(b, { BackgroundColor3 = T.Press }, TweenInfo.new(0.05))
+					task.delay(0.08, function()
+						tween(b, { BackgroundColor3 = T.Hover }, TweenInfo.new(0.12))
+					end)
+					runScript(opt.SCRIPT or opt.Script or opt.Callback, {})
+				end)
+				return b
+			end
+
+			function TabApi:Toggle(opt)
+				opt = opt or {}
+				local on = opt.Default == true
+				local f = widgetFrame(page, 42)
+				nameLabel(f, opt.Name or "Toggle", 0.7)
+
+				local track = Instance.new("TextButton")
+				track.AutoButtonColor = false
+				track.Text = ""
+				track.Size = UDim2.fromOffset(40, 20)
+				track.Position = UDim2.new(1, -52, 0.5, -10)
+				track.BackgroundColor3 = on and T.Accent or Color3.fromRGB(40, 40, 40)
+				track.ZIndex = 5
+				track.Parent = f
+				corner(track, 10)
+
+				local knob = Instance.new("Frame")
+				knob.Size = UDim2.fromOffset(16, 16)
+				knob.Position = on and UDim2.fromOffset(22, 2) or UDim2.fromOffset(2, 2)
+				knob.BackgroundColor3 = on and T.Bg or T.Text
+				knob.BorderSizePixel = 0
+				knob.ZIndex = 6
+				knob.Parent = track
+				corner(knob, 8)
+
+				local function apply(v, fire)
+					on = v
+					tween(track, { BackgroundColor3 = on and T.Accent or Color3.fromRGB(40, 40, 40) })
+					tween(knob, {
+						Position = on and UDim2.fromOffset(22, 2) or UDim2.fromOffset(2, 2),
+						BackgroundColor3 = on and T.Bg or T.Text,
+					})
+					if fire then
+						runScript(opt.SCRIPT or opt.Script or opt.Callback, { Value = on })
+					end
+				end
+				bind(track.MouseButton1Click, function() apply(not on, true) end)
+				return {
+					Set = function(_, v) apply(v, true) end,
+					Get = function() return on end,
+				}
+			end
+
+			function TabApi:Slider(opt)
+				opt = opt or {}
+				local minV = opt.Min or 0
+				local maxV = opt.Max or 100
+				local value = math.clamp(opt.Default or minV, minV, maxV)
+				local decimals = opt.Decimals or opt.Rounding or ((maxV - minV) <= 10 and 1 or 0)
+
+				local f = widgetFrame(page, 56)
+				local nl = nameLabel(f, opt.Name or "Slider", 0.6)
+				nl.Size = UDim2.new(0.6, 0, 0, 22)
+				nl.Position = UDim2.fromOffset(12, 4)
+
+				local valL = Instance.new("TextLabel")
+				valL.BackgroundTransparency = 1
+				valL.Size = UDim2.new(0.4, -12, 0, 22)
+				valL.Position = UDim2.new(0.6, 0, 0, 4)
+				valL.Font = Enum.Font.GothamBold
+				valL.TextSize = 12
+				valL.TextColor3 = T.Sub
+				valL.TextXAlignment = Enum.TextXAlignment.Right
+				valL.ZIndex = 5
+				valL.Parent = f
+
+				local barHold = Instance.new("Frame")
+				barHold.BackgroundTransparency = 1
+				barHold.Size = UDim2.new(1, -24, 0, 16)
+				barHold.Position = UDim2.fromOffset(12, 30)
+				barHold.ZIndex = 5
+				barHold.Parent = f
+
+				local sBar = Instance.new("Frame")
+				sBar.Size = UDim2.new(1, 0, 0, 4)
+				sBar.Position = UDim2.new(0, 0, 0.5, -2)
+				sBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+				sBar.BorderSizePixel = 0
+				sBar.ZIndex = 5
+				sBar.Parent = barHold
+				corner(sBar, 2)
+
+				local fill = Instance.new("Frame")
+				fill.BackgroundColor3 = T.Accent
+				fill.BorderSizePixel = 0
+				fill.ZIndex = 6
+				fill.Parent = sBar
+				corner(fill, 2)
+
+				local knob = Instance.new("Frame")
+				knob.Size = UDim2.fromOffset(12, 12)
+				knob.AnchorPoint = Vector2.new(0.5, 0.5)
+				knob.BackgroundColor3 = T.Text
+				knob.BorderSizePixel = 0
+				knob.ZIndex = 7
+				knob.Parent = barHold
+				corner(knob, 6)
+
+				local function fmt(v)
+					if decimals <= 0 then return tostring(math.floor(v + 0.5)) end
+					local m = 10 ^ decimals
+					return string.format("%." .. decimals .. "f", math.floor(v * m + 0.5) / m)
+				end
+
+				local function set(v, fire)
+					v = math.clamp(v, minV, maxV)
+					value = v
+					local a = (maxV == minV) and 0 or (v - minV) / (maxV - minV)
+					fill.Size = UDim2.new(a, 0, 1, 0)
+					knob.Position = UDim2.new(a, 0, 0.5, 0)
+					valL.Text = fmt(v)
+					if fire then
+						runScript(opt.SCRIPT or opt.Script or opt.Callback, { Value = v })
+					end
+				end
+				set(value, false)
+
+				local sliding = false
+				local function fromX(x)
+					local a = math.clamp((x - barHold.AbsolutePosition.X) / math.max(barHold.AbsoluteSize.X, 1), 0, 1)
+					set(minV + a * (maxV - minV), true)
+				end
+				bind(barHold.InputBegan, function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						sliding = true
+						fromX(input.Position.X)
+					end
+				end)
+				bind(UIS.InputEnded, function(input)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+						sliding = false
+					end
+				end)
+				bind(UIS.InputChanged, function(input)
+					if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+						fromX(input.Position.X)
+					end
+				end)
+				return { Set = function(_, v) set(v, false) end, Get = function() return value end }
+			end
+
+			function TabApi:Dropdown(opt)
+				opt = opt or {}
+				local options = opt.Options or opt.Values or { "1", "2", "3" }
+				local multi = opt.Multi == true
+				local current = opt.Default or options[1]
+				local selected = {}
+				if multi then
+					if type(opt.Default) == "table" then
+						if opt.Default[1] ~= nil then
+							for _, n in ipairs(opt.Default) do selected[tostring(n)] = true end
+						else
+							for k, v in pairs(opt.Default) do
+								if v then selected[tostring(k)] = true end
+							end
+						end
+					end
+				end
+
+				local f = widgetFrame(page, 42)
+				nameLabel(f, opt.Name or opt.Text or "Dropdown", 0.45)
+
+				local function boxText()
+					if not multi then
+						return "  " .. tostring(current) .. "   ▾"
+					end
+					local n, acc = 0, {}
+					for k, v in pairs(selected) do
+						if v then
+							n = n + 1
+							table.insert(acc, k)
+						end
+					end
+					if n == 0 then return "  none   ▾" end
+					if n <= 2 then return "  " .. table.concat(acc, ", ") .. "   ▾" end
+					return "  " .. n .. " selected   ▾"
+				end
+
+				local box = textBtn(f, {
+					Text = boxText(),
+					Size = UDim2.new(0.5, -16, 0, 26),
+					Position = UDim2.new(0.5, 4, 0.5, -13),
+					BackgroundColor3 = Color3.fromRGB(24, 24, 24),
+					Corner = 5,
+					Align = Enum.TextXAlignment.Left,
+				})
+				box.ZIndex = 6
+				stroke(box, Color3.fromRGB(42, 42, 42), 1)
+				hover(box, Color3.fromRGB(24, 24, 24), T.Hover)
+
+				local list = Instance.new("ScrollingFrame")
+				list.Visible = false
+				list.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+				list.BorderSizePixel = 0
+				list.ZIndex = 50
+				list.ScrollBarThickness = 3
+				list.ScrollBarImageColor3 = Color3.fromRGB(70, 70, 70)
+				list.CanvasSize = UDim2.new()
+				list.AutomaticCanvasSize = Enum.AutomaticSize.Y
+				list.Parent = gui
+				corner(list, 6)
+				stroke(list, T.Stroke, 1)
+
+				local ll = Instance.new("UIListLayout")
+				ll.SortOrder = Enum.SortOrder.LayoutOrder
+				ll.Parent = list
+				pad(list, 4, 4, 4, 4)
+
+				local function layoutList()
+					local abs = box.AbsolutePosition
+					local sz = box.AbsoluteSize
+					local h = math.min(#options * 26 + 8, 180)
+					list.Position = UDim2.fromOffset(abs.X, abs.Y + sz.Y + 4)
+					list.Size = UDim2.fromOffset(math.max(sz.X, 140), h)
+				end
+
+				local function fire()
+					if multi then
+						runScript(opt.SCRIPT or opt.Script or opt.Callback, { Value = selected })
+					else
+						runScript(opt.SCRIPT or opt.Script or opt.Callback, { Value = current })
+					end
+				end
+
+				local function set(v, fireNow)
+					if multi then
+						if type(v) == "table" then selected = v end
+					else
+						current = v
+					end
+					box.Text = boxText()
+					if fireNow then fire() end
+				end
+
+				for i, optName in ipairs(options) do
+					local ob = textBtn(list, {
+						Text = "  " .. tostring(optName),
+						Size = UDim2.new(1, 0, 0, 24),
+						BackgroundColor3 = Color3.fromRGB(16, 16, 16),
+						Corner = 4,
+						Align = Enum.TextXAlignment.Left,
+					})
+					ob.ZIndex = 51
+					ob.LayoutOrder = i
+					hover(ob, Color3.fromRGB(16, 16, 16), T.Hover)
+					bind(ob.MouseButton1Click, function()
+						if multi then
+							selected[optName] = not selected[optName]
+							box.Text = boxText()
+							fire()
+						else
+							set(optName, true)
+							list.Visible = false
+						end
+					end)
+				end
+
+				bind(box.MouseButton1Click, function()
+					layoutList()
+					list.Visible = not list.Visible
+				end)
+				bind(RunService.RenderStepped, function()
+					if list.Visible then layoutList() end
+				end)
+				return {
+					Set = function(_, v) set(v, false) end,
+					Get = function()
+						if multi then return selected end
+						return current
+					end,
+				}
+			end
+
+			function TabApi:TextBox(opt)
+				opt = opt or {}
+				local f = widgetFrame(page, 42)
+				local hasName = opt.Name and opt.Name ~= ""
+				if hasName then
+					nameLabel(f, opt.Name, 0.32)
+				end
+				local box = Instance.new("TextBox")
+				box.Size = hasName and UDim2.new(0.68, -16, 0, 26) or UDim2.new(1, -16, 0, 26)
+				box.Position = hasName and UDim2.new(0.32, 4, 0.5, -13) or UDim2.fromOffset(8, 8)
+				box.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
+				box.BorderSizePixel = 0
+				box.Text = opt.Default or ""
+				box.PlaceholderText = opt.Placeholder or ""
+				box.TextColor3 = T.Text
+				box.PlaceholderColor3 = T.Sub
+				box.Font = Enum.Font.Gotham
+				box.TextSize = 13
+				box.ClearTextOnFocus = false
+				box.TextXAlignment = Enum.TextXAlignment.Left
+				box.ZIndex = 6
+				box.Parent = f
+				corner(box, 5)
+				stroke(box, Color3.fromRGB(42, 42, 42), 1)
+				local padBox = Instance.new("UIPadding")
+				padBox.PaddingLeft = UDim.new(0, 8)
+				padBox.PaddingRight = UDim.new(0, 8)
+				padBox.Parent = box
+				bind(box.FocusLost, function()
+					runScript(opt.SCRIPT or opt.Script or opt.Callback, { Value = box.Text })
+				end)
+				return {
+					Get = function() return box.Text end,
+					Set = function(_, v) box.Text = tostring(v or "") end,
+				}
+			end
+
+			function TabApi:ColorPicker(opt)
+				opt = opt or {}
+				local col = opt.Default or Color3.fromRGB(255, 255, 255)
+				local f = widgetFrame(page, 42)
+				nameLabel(f, opt.Name or "Color", 0.55)
+
+				local sw = Instance.new("TextButton")
+				sw.AutoButtonColor = false
+				sw.Text = ""
+				sw.Size = UDim2.fromOffset(48, 22)
+				sw.Position = UDim2.new(1, -60, 0.5, -11)
+				sw.BackgroundColor3 = col
+				sw.ZIndex = 6
+				sw.Parent = f
+				corner(sw, 4)
+				stroke(sw, Color3.fromRGB(50, 50, 50), 1)
+
+				local pop = Instance.new("Frame")
+				pop.Visible = false
+				pop.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+				pop.BorderSizePixel = 0
+				pop.ZIndex = 55
+				pop.Size = UDim2.fromOffset(180, 92)
+				pop.Parent = gui
+				corner(pop, 6)
+				stroke(pop, T.Stroke, 1)
+				pad(pop, 8, 8, 8, 8)
+
+				local function mkRow(y, label, channel)
+					local l = Instance.new("TextLabel")
+					l.BackgroundTransparency = 1
+					l.Size = UDim2.new(0, 14, 0, 16)
+					l.Position = UDim2.fromOffset(0, y)
+					l.Font = Enum.Font.GothamBold
+					l.TextSize = 11
+					l.TextColor3 = T.Sub
+					l.Text = label
+					l.ZIndex = 56
+					l.Parent = pop
+					local hold = Instance.new("TextButton")
+					hold.AutoButtonColor = false
+					hold.Text = ""
+					hold.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+					hold.Size = UDim2.new(1, -18, 0, 8)
+					hold.Position = UDim2.fromOffset(18, y + 4)
+					hold.ZIndex = 56
+					hold.Parent = pop
+					corner(hold, 3)
+					local fill = Instance.new("Frame")
+					fill.BorderSizePixel = 0
+					fill.BackgroundColor3 = T.Accent
+					fill.Size = UDim2.new(channel, 0, 1, 0)
+					fill.ZIndex = 57
+					fill.Parent = hold
+					corner(fill, 3)
+					return hold, fill
+				end
+
+				local rH, rF = mkRow(0, "R", col.R)
+				local gH, gF = mkRow(24, "G", col.G)
+				local bH, bF = mkRow(48, "B", col.B)
+
+				local function apply(c, fire)
+					col = c
+					sw.BackgroundColor3 = col
+					rF.Size = UDim2.new(col.R, 0, 1, 0)
+					gF.Size = UDim2.new(col.G, 0, 1, 0)
+					bF.Size = UDim2.new(col.B, 0, 1, 0)
+					if fire then
+						runScript(opt.SCRIPT or opt.Script or opt.Callback, { Value = col })
+					end
+				end
+
+				local function bindChan(hold, chan)
+					local sliding = false
+					local function fromX(x)
+						local a = math.clamp((x - hold.AbsolutePosition.X) / math.max(hold.AbsoluteSize.X, 1), 0, 1)
+						local r, g, b = col.R, col.G, col.B
+						if chan == "R" then r = a elseif chan == "G" then g = a else b = a end
+						apply(Color3.new(r, g, b), true)
+					end
+					bind(hold.InputBegan, function(input)
+						if input.UserInputType == Enum.UserInputType.MouseButton1 then
+							sliding = true
+							fromX(input.Position.X)
+						end
+					end)
+					bind(UIS.InputEnded, function(input)
+						if input.UserInputType == Enum.UserInputType.MouseButton1 then sliding = false end
+					end)
+					bind(UIS.InputChanged, function(input)
+						if sliding and input.UserInputType == Enum.UserInputType.MouseMovement then
+							fromX(input.Position.X)
+						end
+					end)
+				end
+				bindChan(rH, "R")
+				bindChan(gH, "G")
+				bindChan(bH, "B")
+
+				bind(sw.MouseButton1Click, function()
+					local abs = sw.AbsolutePosition
+					pop.Position = UDim2.fromOffset(abs.X - 132, abs.Y + 26)
+					pop.Visible = not pop.Visible
+				end)
+				bind(RunService.RenderStepped, function()
+					if pop.Visible then
+						local abs = sw.AbsolutePosition
+						pop.Position = UDim2.fromOffset(abs.X - 132, abs.Y + 26)
+					end
+				end)
+
+				return { Set = function(_, v) apply(v, false) end, Get = function() return col end }
+			end
+
+			function TabApi:Donate(opt)
+				opt = opt or {}
+				local f = widgetFrame(page, 52)
+				f.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+				local b = textBtn(f, {
+					Text = opt.Name or "DONATE",
+					Size = UDim2.new(1, -16, 1, -12),
+					Position = UDim2.fromOffset(8, 6),
+					BackgroundColor3 = Color3.fromRGB(28, 24, 14),
+					Corner = 5,
+				})
+				b.Font = Enum.Font.GothamBold
+				b.TextSize = 14
+				b.TextColor3 = Color3.fromRGB(255, 210, 120)
+				b.ZIndex = 5
+				stroke(b, Color3.fromRGB(80, 60, 20), 1)
+				hover(b, Color3.fromRGB(28, 24, 14), Color3.fromRGB(40, 32, 16))
+				bind(b.MouseButton1Click, function()
+					runScript(opt.SCRIPT or opt.Script or opt.Callback, {})
+					if opt.ProductId then
+						pcall(function()
+							MarketplaceService:PromptProductPurchase(player, opt.ProductId)
+						end)
+					elseif opt.GamePassId then
+						pcall(function()
+							MarketplaceService:PromptGamePassPurchase(player, opt.GamePassId)
+						end)
+					end
+				end)
+				return b
+			end
+
+			TabApi.CreateButton = TabApi.Button
+			TabApi.CreateLabel = TabApi.Label
+			TabApi.CreateSlider = TabApi.Slider
+			TabApi.CreateDropdown = TabApi.Dropdown
+			TabApi.CreateDonate = TabApi.Donate
+			TabApi.CreateToggle = TabApi.Toggle
+			TabApi.CreateColorPicker = TabApi.ColorPicker
+			TabApi.CreateTextBox = TabApi.TextBox
+			return TabApi
+		end
+
+		WindowApi.CreateTab = WindowApi.Tab
+		function WindowApi:Minimize() setMinimized(true) end
+		function WindowApi:Maximize() setMaximized(true) end
+		function WindowApi:Toggle()
+			gui.Enabled = not gui.Enabled
+		end
+		function WindowApi:SetVisible(v)
+			gui.Enabled = v and true or false
+		end
+		function WindowApi:Destroy()
+			for _, fn in ipairs(onUnload) do
+				pcall(fn)
+			end
+			for _, c in ipairs(connections) do
+				pcall(function() c:Disconnect() end)
+			end
+			gui:Destroy()
+		end
+
+		local Window = setmetatable({}, {
+			__index = function(_, k)
+				if k == "Name" then return title.Text end
+				return WindowApi[k]
+			end,
+			__newindex = function(_, k, v)
+				if k == "Name" or k == "name" then
+					title.Text = tostring(v)
+				else
+					WindowApi[k] = v
+				end
+			end,
+		})
+
+		return Window
+	end
+
+	return Lib
+end)()
+
+-- =========================================================
+-- SERVICES / STATE
+-- =========================================================
+local player = game.Players.LocalPlayer
+local camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local MaterialService = game:GetService("MaterialService")
+local ContentProvider = game:GetService("ContentProvider")
+local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+
+local httpRequest = request or http_request or (syn and syn.request)
+local API_URL = "http://127.0.0.1:8000"
+local sessionCode = "FOX-" .. math.random(1000, 9999)
+local mouse = player:GetMouse()
+
+local function getGold()
+	local ls = player:FindFirstChild("leaderstats")
+	if ls then
+		for _, stat in ipairs(ls:GetChildren()) do
+			local n = stat.Name:lower()
+			if n:find("gold") or n:find("money") or n:find("honey") or n:find("cash") or n:find("coins") then
+				return stat.Value
+			end
+		end
+	end
+	return 0
+end
+
+local function getInventory()
+	local inv = {}
+	pcall(function()
+		for _, tool in ipairs(player.Backpack:GetChildren()) do
+			inv[tool.Name] = (inv[tool.Name] or 0) + 1
+		end
+		if player.Character then
+			for _, tool in ipairs(player.Character:GetChildren()) do
+				if tool:IsA("Tool") then
+					inv[tool.Name] = (inv[tool.Name] or 0) + 1
+				end
+			end
+		end
+	end)
+	return inv
+end
+
+local BTB = {
+	SpeedEnabled = false,
+	SpeedValue = 100,
+	GodMode = false,
+	Noclip = false,
+	InfJump = false,
+	AntiAFK = true,
+	AntiKB = false,
+	JumpConn = nil,
+	NoclipConn = nil,
+}
+
+local pineAmount = 50
+local pineAuto = false
+local dupeAmount = 10
+local dupeSlot = 42
+
+-- ===== Dmitry farm / click tp / gift =====
+local autoFarmActive = false
+local currentPlatform = nil
+local farmStatusText = "Stopped"
+local clickTPActive = false
+local tpConnection = nil
+
+local farmPoints = {
+	CFrame.new(-135.058548, 71.5735931, 1389.66492, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+	CFrame.new(-121.212387, 94.811821, 2182.42432, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+	CFrame.new(-107.262383, 99.8945236, 3749.67578, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+	CFrame.new(-113.035942, 90.1609573, 2992.92114, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+	CFrame.new(-105.003433, 85.6560287, 4493.32178, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+	CFrame.new(-103.476631, 94.9249115, 5260.82812, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+	CFrame.new(-104.277824, 86.4904175, 6019.4126, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+	CFrame.new(-125.980156, 65.571907, 6894.36279, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+	CFrame.new(-116.013321, 39.0258293, 7561.04346, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+	CFrame.new(-52.2332153, -361.735779, 9284.8623, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+	CFrame.new(-52.9334259, -361.626831, 9489.81543, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+}
+
+local function removePlatform()
+	if currentPlatform then
+		currentPlatform:Destroy()
+		currentPlatform = nil
+	end
+end
+
+local function spawnPlatform(cframe)
+	removePlatform()
+	local part = Instance.new("Part")
+	part.Size = Vector3.new(10, 1, 10)
+	part.CFrame = cframe * CFrame.new(0, -3.5, 0)
+	part.Anchored = true
+	part.Transparency = 0.5
+	part.Color = Color3.fromRGB(0, 255, 255)
+	part.Material = Enum.Material.Neon
+	part.Parent = workspace
+	currentPlatform = part
+end
+
+local function loopAutoFarm()
+	farmStatusText = "Running"
+	while autoFarmActive do
+		local character = player.Character
+		local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+		if rootPart and rootPart.Parent then
+			for _, cframe in ipairs(farmPoints) do
+				if not autoFarmActive then break end
+				spawnPlatform(cframe)
+				rootPart.CFrame = cframe
+				task.wait(1)
+			end
+		end
+		removePlatform()
+		task.wait(1)
+	end
+	removePlatform()
+	farmStatusText = "Stopped"
+end
+
+local function setClickTP(on)
+	clickTPActive = on
+	if tpConnection then
+		tpConnection:Disconnect()
+		tpConnection = nil
+	end
+	if not on then return end
+	tpConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessed then
+			local character = player.Character
+			local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+			if rootPart and mouse.Target then
+				rootPart.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
+			end
+		end
+	end)
+end
+
+local giftItems = {
+	{ Name = "+3 Egg Cannons", Id = 1161573830 },
+	{ Name = "+5 Dragon Harpoons", Id = 1109792539 },
+	{ Name = "+5 Duel Harpoons", Id = 1126344149 },
+	{ Name = "+4 Cookie Wheels", Id = 1126385548 },
+}
+local giftNames = {}
+local giftIdByName = {}
+for _, item in ipairs(giftItems) do
+	table.insert(giftNames, item.Name)
+	giftIdByName[item.Name] = item.Id
+end
+local giftTargetName = ""
+local selectedGiftId = nil
+local selectedGiftName = ""
+
+local function safeInvoke(id, productType)
+	local event = workspace:FindFirstChild("PromptRobuxEvent")
+	if event and event:IsA("RemoteFunction") then
+		event:InvokeServer(id, productType)
+	end
+end
+
+local function sendGift()
+	local cleanName = string.gsub(giftTargetName or "", "^%s*(.-)%s*$", "%1")
+	if cleanName == "" or cleanName == player.Name then
+		return false, "введи чужой ник"
+	end
+	if not selectedGiftId then
+		return false, "выбери предмет"
+	end
+	local targetUserId = nil
+	pcall(function()
+		targetUserId = Players:GetUserIdFromNameAsync(cleanName)
+	end)
+	if not targetUserId then
+		return false, "игрок не найден"
+	end
+	local updateEvent = workspace:FindFirstChild("UpdateLastGiftedIDRE")
+	if updateEvent and updateEvent:IsA("RemoteEvent") then
+		updateEvent:FireServer(targetUserId, cleanName)
+	end
+	task.wait(0.3)
+	local robuxEvent = workspace:FindFirstChild("PromptRobuxEvent")
+	if robuxEvent and robuxEvent:IsA("RemoteFunction") then
+		robuxEvent:InvokeServer(selectedGiftId, "Product")
+		return true, "запрос на гифт отправлен"
+	end
+	return false, "событие не найдено"
+end
+
+local defaultLighting = {
+	Brightness = Lighting.Brightness,
+	ClockTime = Lighting.ClockTime,
+	GlobalShadows = Lighting.GlobalShadows,
+	OutdoorAmbient = Lighting.OutdoorAmbient,
+	Ambient = Lighting.Ambient,
+	FogStart = Lighting.FogStart,
+	FogEnd = Lighting.FogEnd,
+	FogColor = Lighting.FogColor,
+}
+
+local DefaultSky = Lighting:FindFirstChildOfClass("Sky")
+local DefaultSkySettings = {}
+if DefaultSky then
+	DefaultSkySettings.SkyboxBk = DefaultSky.SkyboxBk
+	DefaultSkySettings.SkyboxDn = DefaultSky.SkyboxDn
+	DefaultSkySettings.SkyboxFt = DefaultSky.SkyboxFt
+	DefaultSkySettings.SkyboxLf = DefaultSky.SkyboxLf
+	DefaultSkySettings.SkyboxRt = DefaultSky.SkyboxRt
+	DefaultSkySettings.SkyboxUp = DefaultSky.SkyboxUp
+end
+
+local AuraModels = {
+	"Godly", "Super Sayien", "North Star", "Blue Lord",
+	"Pink Aura", "Angel Wing", "Sweet Heart", "Ethereal Aura",
+}
+local AuraModelIDs = {
+	["Godly"] = "rbxassetid://16699750981",
+	["Super Sayien"] = "rbxassetid://116109508364297",
+	["North Star"] = "rbxassetid://83945069652732",
+	["Blue Lord"] = "rbxassetid://10974316799",
+	["Pink Aura"] = "rbxassetid://115980859615239",
+	["Angel Wing"] = "rbxassetid://90022969696073",
+	["Sweet Heart"] = "rbxassetid://91724768175470",
+	["Ethereal Aura"] = "rbxassetid://97041568674250",
+}
+local activeClassicAuras = {}
+local classicAuraOn = false
+local classicAuraSelected = {}
+
+local PARTICLE_AURA_DATA = {
+	{ "starlight", "rbxassetid://134645216613107" },
+	{ "heavenly", "rbxassetid://139300897520961" },
+	{ "ribbon", "rbxassetid://132069507632161" },
+	{ "sakura", "rbxassetid://81755778619404" },
+	{ "angel", "rbxassetid://97658130917593" },
+	{ "wind", "rbxassetid://80694081850877" },
+	{ "flow", "rbxassetid://119913533725648" },
+	{ "star", "rbxassetid://73754563740680" },
+	{ "neon", "rbxassetid://18498709246" },
+}
+local PARTICLE_AURA_NAMES = {}
+local particleAuraIdByName = {}
+for _, row in ipairs(PARTICLE_AURA_DATA) do
+	table.insert(PARTICLE_AURA_NAMES, row[1])
+	particleAuraIdByName[row[1]] = row[2]
+end
+local loadedParticleAuras = {}
+local activeParticleAuras = {}
+local particleAuraOn = false
+local particleAuraSelected = {}
+local particleAuraColor = Color3.fromRGB(133, 220, 255)
+
+local MINECRAFT_VARIANTS = {
+	Brick = { BaseMaterial = Enum.Material.Brick, Texture = "rbxassetid://10777285622" },
+	Concrete = { BaseMaterial = Enum.Material.Concrete, Texture = "rbxassetid://15622710576" },
+	CorrodedMetal = { BaseMaterial = Enum.Material.CorrodedMetal, Texture = "rbxassetid://78612695839404" },
+	Grass = { BaseMaterial = Enum.Material.Grass, Texture = "rbxassetid://9267183930" },
+	Metal = { BaseMaterial = Enum.Material.Metal, Texture = "rbxassetid://121650613091353" },
+	Sand = { BaseMaterial = Enum.Material.Sand, Texture = "rbxassetid://12624140843" },
+	Slate = { BaseMaterial = Enum.Material.Slate, Texture = "rbxassetid://8676746437" },
+	Wood = { BaseMaterial = Enum.Material.Wood, Texture = "rbxassetid://3258599312" },
+	WoodPlanks = { BaseMaterial = Enum.Material.WoodPlanks, Texture = "rbxassetid://8676581022" },
+}
+local MATERIAL_VARIANT_BY_MATERIAL = {
+	[Enum.Material.Brick] = "Brick",
+	[Enum.Material.Concrete] = "Concrete",
+	[Enum.Material.CorrodedMetal] = "CorrodedMetal",
+	[Enum.Material.Grass] = "Grass",
+	[Enum.Material.Metal] = "Metal",
+	[Enum.Material.Sand] = "Sand",
+	[Enum.Material.Slate] = "Slate",
+	[Enum.Material.Wood] = "Wood",
+	[Enum.Material.WoodPlanks] = "WoodPlanks",
+}
+local MINECRAFT_TERRAIN_COLORS = {
+	[Enum.Material.Grass] = Color3.fromRGB(106, 170, 64),
+	[Enum.Material.Ground] = Color3.fromRGB(134, 96, 67),
+	[Enum.Material.Mud] = Color3.fromRGB(102, 76, 51),
+	[Enum.Material.Sand] = Color3.fromRGB(219, 211, 160),
+	[Enum.Material.Rock] = Color3.fromRGB(122, 122, 122),
+	[Enum.Material.Slate] = Color3.fromRGB(90, 90, 90),
+	[Enum.Material.Snow] = Color3.fromRGB(245, 245, 245),
+	[Enum.Material.Water] = Color3.fromRGB(63, 118, 228),
+}
+local LarpticTextureState = setmetatable({}, { __mode = "k" })
+local LarpticMaterialVariantsBuilt = false
+
+local SkyboxAssets = {
+	["Black Storm"] = { Bk = "rbxassetid://15502511288", Dn = "rbxassetid://15502508460", Ft = "rbxassetid://15502510289", Lf = "rbxassetid://15502507918", Rt = "rbxassetid://15502509398", Up = "rbxassetid://15502511911" },
+	["HD"] = { Bk = "http://www.roblox.com/asset/?id=16553658937", Dn = "http://www.roblox.com/asset/?id=16553660713", Ft = "http://www.roblox.com/asset/?id=16553662144", Lf = "http://www.roblox.com/asset/?id=16553664042", Rt = "http://www.roblox.com/asset/?id=16553665766", Up = "http://www.roblox.com/asset/?id=16553667750" },
+	["Snow"] = { Bk = "http://www.roblox.com/asset/?id=155657655", Dn = "http://www.roblox.com/asset/?id=155674246", Ft = "http://www.roblox.com/asset/?id=155657609", Lf = "http://www.roblox.com/asset/?id=155657671", Rt = "http://www.roblox.com/asset/?id=155657619", Up = "http://www.roblox.com/asset/?id=155674931" },
+	["Blue Space"] = { Bk = "rbxassetid://15536110634", Dn = "rbxassetid://15536112543", Ft = "rbxassetid://15536116141", Lf = "rbxassetid://15536114370", Rt = "rbxassetid://15536118762", Up = "rbxassetid://15536117282" },
+	["Realistic"] = { Bk = "rbxassetid://653719502", Dn = "rbxassetid://653718790", Ft = "rbxassetid://653719067", Lf = "rbxassetid://653719190", Rt = "rbxassetid://653718931", Up = "rbxassetid://653719321" },
+	["Stormy"] = { Bk = "http://www.roblox.com/asset/?id=18703245834", Dn = "http://www.roblox.com/asset/?id=18703243349", Ft = "http://www.roblox.com/asset/?id=18703240532", Lf = "http://www.roblox.com/asset/?id=18703237556", Rt = "http://www.roblox.com/asset/?id=18703235430", Up = "http://www.roblox.com/asset/?id=18703232671" },
+	["Pink"] = { Bk = "rbxassetid://12216109205", Dn = "rbxassetid://12216109875", Ft = "rbxassetid://12216109489", Lf = "rbxassetid://12216110170", Rt = "rbxassetid://12216110471", Up = "rbxassetid://12216108877" },
+	["Sunset"] = { Bk = "rbxassetid://600830446", Dn = "rbxassetid://600831635", Ft = "rbxassetid://600832720", Lf = "rbxassetid://600886090", Rt = "rbxassetid://600833862", Up = "rbxassetid://600835177" },
+	["Arctic"] = { Bk = "http://www.roblox.com/asset/?id=225469390", Dn = "http://www.roblox.com/asset/?id=225469395", Ft = "http://www.roblox.com/asset/?id=225469403", Lf = "http://www.roblox.com/asset/?id=225469450", Rt = "http://www.roblox.com/asset/?id=225469471", Up = "http://www.roblox.com/asset/?id=225469481" },
+	["Space"] = { Bk = "http://www.roblox.com/asset/?id=166509999", Dn = "http://www.roblox.com/asset/?id=166510057", Ft = "http://www.roblox.com/asset/?id=166510116", Lf = "http://www.roblox.com/asset/?id=166510092", Rt = "http://www.roblox.com/asset/?id=166510131", Up = "http://www.roblox.com/asset/?id=166510114" },
+	["Roblox Default"] = { Bk = "rbxasset://textures/sky/sky512_bk.tex", Dn = "rbxasset://textures/sky/sky512_dn.tex", Ft = "rbxasset://textures/sky/sky512_ft.tex", Lf = "rbxasset://textures/sky/sky512_lf.tex", Rt = "rbxasset://textures/sky/sky512_rt.tex", Up = "rbxasset://textures/sky/sky512_up.tex" },
+	["Red Night"] = { Bk = "http://www.roblox.com/asset/?id=401664839", Dn = "http://www.roblox.com/asset/?id=401664862", Ft = "http://www.roblox.com/asset/?id=401664960", Lf = "http://www.roblox.com/asset/?id=401664881", Rt = "http://www.roblox.com/asset/?id=401664901", Up = "http://www.roblox.com/asset/?id=401664936" },
+	["Deep Space 1"] = { Bk = "http://www.roblox.com/asset/?id=149397692", Dn = "http://www.roblox.com/asset/?id=149397686", Ft = "http://www.roblox.com/asset/?id=149397697", Lf = "http://www.roblox.com/asset/?id=149397684", Rt = "http://www.roblox.com/asset/?id=149397688", Up = "http://www.roblox.com/asset/?id=149397702" },
+	["Pink Skies"] = { Bk = "http://www.roblox.com/asset/?id=151165214", Dn = "http://www.roblox.com/asset/?id=151165197", Ft = "http://www.roblox.com/asset/?id=151165224", Lf = "http://www.roblox.com/asset/?id=151165191", Rt = "http://www.roblox.com/asset/?id=151165206", Up = "http://www.roblox.com/asset/?id=151165227" },
+	["Purple Sunset"] = { Bk = "rbxassetid://264908339", Dn = "rbxassetid://264907909", Ft = "rbxassetid://264909420", Lf = "rbxassetid://264909758", Rt = "rbxassetid://264908886", Up = "rbxassetid://264907379" },
+	["Blue Night"] = { Bk = "http://www.roblox.com/asset/?id=12064107", Dn = "http://www.roblox.com/asset/?id=12064152", Ft = "http://www.roblox.com/asset/?id=12064121", Lf = "http://www.roblox.com/asset/?id=12063984", Rt = "http://www.roblox.com/asset/?id=12064115", Up = "http://www.roblox.com/asset/?id=12064131" },
+	["Blossom Daylight"] = { Bk = "http://www.roblox.com/asset/?id=271042516", Dn = "http://www.roblox.com/asset/?id=271077243", Ft = "http://www.roblox.com/asset/?id=271042556", Lf = "http://www.roblox.com/asset/?id=271042310", Rt = "http://www.roblox.com/asset/?id=271042467", Up = "http://www.roblox.com/asset/?id=271077958" },
+	["Blue Nebula"] = { Bk = "http://www.roblox.com/asset?id=135207744", Dn = "http://www.roblox.com/asset?id=135207662", Ft = "http://www.roblox.com/asset?id=135207770", Lf = "http://www.roblox.com/asset?id=135207615", Rt = "http://www.roblox.com/asset?id=135207695", Up = "http://www.roblox.com/asset?id=135207794" },
+	["Blue Planet"] = { Bk = "rbxassetid://218955819", Dn = "rbxassetid://218953419", Ft = "rbxassetid://218954524", Lf = "rbxassetid://218958493", Rt = "rbxassetid://218957134", Up = "rbxassetid://218950090" },
+	["Deep Space 2"] = { Bk = "http://www.roblox.com/asset/?id=159248188", Dn = "http://www.roblox.com/asset/?id=159248183", Ft = "http://www.roblox.com/asset/?id=159248187", Lf = "http://www.roblox.com/asset/?id=159248173", Rt = "http://www.roblox.com/asset/?id=159248192", Up = "http://www.roblox.com/asset/?id=159248176" },
+	["Summer"] = { Bk = "rbxassetid://16648590964", Dn = "rbxassetid://16648617436", Ft = "rbxassetid://16648595424", Lf = "rbxassetid://16648566370", Rt = "rbxassetid://16648577071", Up = "rbxassetid://16648598180" },
+	["Galaxy"] = { Bk = "rbxassetid://15983968922", Dn = "rbxassetid://15983966825", Ft = "rbxassetid://15983965025", Lf = "rbxassetid://15983967420", Rt = "rbxassetid://15983966246", Up = "rbxassetid://15983964246" },
+	["Stylized"] = { Bk = "rbxassetid://18351376859", Dn = "rbxassetid://18351374919", Ft = "rbxassetid://18351376800", Lf = "rbxassetid://18351376469", Rt = "rbxassetid://18351376457", Up = "rbxassetid://18351377189" },
+	["Minecraft"] = { Bk = "rbxassetid://8735166756", Dn = "http://www.roblox.com/asset/?id=8735166707", Ft = "http://www.roblox.com/asset/?id=8735231668", Lf = "http://www.roblox.com/asset/?id=8735166755", Rt = "http://www.roblox.com/asset/?id=8735166751", Up = "http://www.roblox.com/asset/?id=8735166729" },
+	["Cloudy Rain"] = { Bk = "http://www.roblox.com/asset/?id=4498828382", Dn = "http://www.roblox.com/asset/?id=4498828812", Ft = "http://www.roblox.com/asset/?id=4498829917", Lf = "http://www.roblox.com/asset/?id=4498830911", Rt = "http://www.roblox.com/asset/?id=4498830417", Up = "http://www.roblox.com/asset/?id=4498831746" },
+	["Black Cloudy Rain"] = { Bk = "http://www.roblox.com/asset/?id=149679669", Dn = "http://www.roblox.com/asset/?id=149681979", Ft = "http://www.roblox.com/asset/?id=149679690", Lf = "http://www.roblox.com/asset/?id=149679709", Rt = "http://www.roblox.com/asset/?id=149679722", Up = "http://www.roblox.com/asset/?id=149680199" },
+}
+
+local HatVariables = {
+	enabled = false, style = "Classic", transparency = 0.3,
+	rainbow = false, rainbowSpeed = 5, color = Color3.fromRGB(0, 255, 255),
+	radius = 2.4, height = 1.6, reflectance = 0, sides = 25,
+	parts = {}, connection = nil,
+}
+local tau = math.pi * 2
+local drawings = {}
+local hasDrawing = false
+pcall(function()
+	local t = Drawing.new("Line")
+	t:Remove()
+	hasDrawing = true
+end)
+
+local function rebuildDrawings(n)
+	if hasDrawing then
+		for i = 1, #drawings do
+			pcall(function() drawings[i][1]:Remove() end)
+			pcall(function() drawings[i][2]:Remove() end)
+		end
+	end
+	drawings = {}
+	if not hasDrawing then return end
+	for i = 1, n do
+		local line = Drawing.new("Line")
+		local tri = Drawing.new("Triangle")
+		line.ZIndex = 2
+		line.Thickness = 2
+		tri.ZIndex = 1
+		tri.Filled = true
+		drawings[i] = { line, tri }
+	end
+end
+rebuildDrawings(HatVariables.sides)
+
+local TrailVariables = {
+	enabled = false, isGradient = false, lifetime = 0.5,
+	transparencyStart = 0, rainbow = false,
+	colorStatic = Color3.fromRGB(0, 255, 255),
+	gradient1 = Color3.fromRGB(0, 86, 255),
+	gradient2 = Color3.fromRGB(255, 0, 0),
+	parts = {}, connection = nil,
+}
+local AuraTrailerVariables = { enabled = false, color = Color3.fromRGB(255, 0, 0), lifetime = 0.5 }
+local ForceFieldVariables = { enabled = false, color = Color3.fromRGB(128, 128, 128), rainbow = false, originalColors = {}, connection = nil }
+local WorldVariables = { screenEnabled = false, screenIntensity = 0, screenConnection = nil, timeEnabled = false, timeValue = 12, fullBrightEnabled = false }
+local NebulaVariables = { enabled = false, themeColor = Color3.fromRGB(173, 216, 230) }
+local SkyboxVariables = { current = "HD", customEnabled = false }
+local AnimeVariables = { enabled = false, gui = nil }
+local FPSVariables = { fpsPing1Enabled = false, fpsPing2Enabled = false }
+local LarpticAtmosphere = nil
+local Atm = {
+	enabled = false, density = 0.35, offset = 0, haze = 1, glare = 10,
+	color = Color3.fromRGB(199, 212, 255), decay = Color3.fromRGB(106, 112, 125),
+}
+
+local function Hat_RemoveClassic()
+	if HatVariables.parts[player.Character] then
+		HatVariables.parts[player.Character]:Destroy()
+		HatVariables.parts[player.Character] = nil
+	end
+end
+
+local function Hat_AddClassic(char)
+	task.wait(0.1)
+	local head = char:WaitForChild("Head", 5)
+	if not head then return end
+	Hat_RemoveClassic()
+	local hat = Instance.new("Part")
+	hat.Name = "ChineseHat"
+	hat.Transparency = HatVariables.transparency
+	hat.Color = HatVariables.color
+	hat.Material = Enum.Material.Neon
+	hat.CanCollide = false
+	hat.Reflectance = HatVariables.reflectance
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshId = "rbxassetid://1033714"
+	mesh.Scale = Vector3.new(HatVariables.radius, HatVariables.height, HatVariables.radius)
+	mesh.Parent = hat
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = head
+	weld.Part1 = hat
+	weld.Parent = hat
+	hat.CFrame = head.CFrame * CFrame.new(0, 1.1, 0)
+	hat.Parent = char
+	HatVariables.parts[char] = hat
+end
+
+local function Hat_UpdateClassic()
+	for char, hat in pairs(HatVariables.parts) do
+		if hat and hat.Parent and char == player.Character then
+			hat.Transparency = HatVariables.transparency
+			hat.Reflectance = HatVariables.reflectance
+			if HatVariables.rainbow then
+				hat.Color = Color3.fromHSV(tick() % HatVariables.rainbowSpeed / HatVariables.rainbowSpeed, 1, 1)
+			else
+				hat.Color = HatVariables.color
+			end
+			local mesh = hat:FindFirstChildOfClass("SpecialMesh")
+			if mesh then
+				mesh.Scale = Vector3.new(HatVariables.radius, HatVariables.height, HatVariables.radius)
+			end
+		end
+	end
+end
+
+local function Hat_UpdateDrawing()
+	local pass = HatVariables.enabled and player.Character and player.Character:FindFirstChild("Head")
+		and (camera.CFrame.Position - camera.Focus.Position).Magnitude > 1
+		and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0
+	for i = 1, #drawings do
+		local line, triangle = drawings[i][1], drawings[i][2]
+		if pass then
+			local color = HatVariables.rainbow
+				and Color3.fromHSV((tick() % HatVariables.rainbowSpeed / HatVariables.rainbowSpeed - (i / #drawings)) % 1, 0.5, 1)
+				or HatVariables.color
+			local pos = player.Character.Head.Position + Vector3.new(0, 0.75, 0)
+			local topWorld = pos + Vector3.new(0, 0.75, 0)
+			local lastA, nextA = (i / HatVariables.sides) * tau, ((i + 1) / HatVariables.sides) * tau
+			local lastWorld = pos + (Vector3.new(math.cos(lastA), 0, math.sin(lastA)) * HatVariables.radius)
+			local nextWorld = pos + (Vector3.new(math.cos(nextA), 0, math.sin(nextA)) * HatVariables.radius)
+			local lastScreen = camera:WorldToViewportPoint(lastWorld)
+			local nextScreen = camera:WorldToViewportPoint(nextWorld)
+			local topScreen = camera:WorldToViewportPoint(topWorld)
+			line.From = Vector2.new(lastScreen.X, lastScreen.Y)
+			line.To = Vector2.new(nextScreen.X, nextScreen.Y)
+			line.Color = color
+			line.Transparency = 1 - HatVariables.transparency
+			line.Visible = true
+			triangle.PointA = Vector2.new(topScreen.X, topScreen.Y)
+			triangle.PointB = line.From
+			triangle.PointC = line.To
+			triangle.Color = color
+			triangle.Transparency = 0.35
+			triangle.Visible = true
+		else
+			line.Visible = false
+			triangle.Visible = false
+		end
+	end
+end
+
+local function Hat_ToggleEnabled(value)
+	HatVariables.enabled = value
+	if value then
+		if HatVariables.style == "Classic" and player.Character then Hat_AddClassic(player.Character) end
+		if HatVariables.connection then HatVariables.connection:Disconnect() end
+		HatVariables.connection = RunService.Heartbeat:Connect(function()
+			if HatVariables.style == "Classic" then Hat_UpdateClassic() end
+		end)
+	else
+		if player.Character then Hat_RemoveClassic() end
+		for i = 1, #drawings do
+			drawings[i][1].Visible = false
+			drawings[i][2].Visible = false
+		end
+		if HatVariables.connection then HatVariables.connection:Disconnect(); HatVariables.connection = nil end
+	end
+end
+
+local function Hat_ChangeStyle(newStyle)
+	local was = HatVariables.enabled
+	HatVariables.style = newStyle
+	if was then
+		Hat_ToggleEnabled(false)
+		task.wait(0.1)
+		Hat_ToggleEnabled(true)
+	end
+end
+
+local function Hat_UpdateSides(newSides)
+	HatVariables.sides = newSides
+	rebuildDrawings(newSides)
+end
+
+RunService.RenderStepped:Connect(function()
+	if HatVariables.enabled and HatVariables.style == "Drawing" then Hat_UpdateDrawing() end
+end)
+
+local function Trail_RemoveFromCharacter(char)
+	if TrailVariables.parts[char] then TrailVariables.parts[char]:Destroy(); TrailVariables.parts[char] = nil end
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		local t = char.HumanoidRootPart
+		if t:FindFirstChild("TrailAttach0") then t.TrailAttach0:Destroy() end
+		if t:FindFirstChild("TrailAttach1") then t.TrailAttach1:Destroy() end
+	end
+end
+
+local function Trail_AddToCharacter(character)
+	local torso = character:WaitForChild("HumanoidRootPart", 5)
+	if not torso then return end
+	Trail_RemoveFromCharacter(character)
+	local a0 = Instance.new("Attachment"); a0.Name = "TrailAttach0"; a0.Position = Vector3.new(0, 2, 0); a0.Parent = torso
+	local a1 = Instance.new("Attachment"); a1.Name = "TrailAttach1"; a1.Position = Vector3.new(0, -2, 0); a1.Parent = torso
+	local trail = Instance.new("Trail")
+	trail.Attachment0 = a0
+	trail.Attachment1 = a1
+	trail.Lifetime = TrailVariables.lifetime
+	trail.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, TrailVariables.transparencyStart),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	if TrailVariables.isGradient then
+		trail.Color = ColorSequence.new(TrailVariables.gradient1, TrailVariables.gradient2)
+	else
+		trail.Color = ColorSequence.new(TrailVariables.colorStatic)
+	end
+	trail.LightEmission = 0.2
+	trail.Enabled = true
+	trail.Parent = character
+	TrailVariables.parts[character] = trail
+end
+
+local function Trail_UpdateAll()
+	for char, trail in pairs(TrailVariables.parts) do
+		if trail and trail.Parent and char == player.Character then
+			trail.Lifetime = TrailVariables.lifetime
+			trail.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, TrailVariables.transparencyStart),
+				NumberSequenceKeypoint.new(1, 1),
+			})
+			if TrailVariables.isGradient then
+				trail.Color = ColorSequence.new(TrailVariables.gradient1, TrailVariables.gradient2)
+			else
+				trail.Color = TrailVariables.rainbow
+					and ColorSequence.new(Color3.fromHSV(tick() % 5 / 5, 1, 1))
+					or ColorSequence.new(TrailVariables.colorStatic)
+			end
+		end
+	end
+end
+
+local function Trail_ToggleEnabled(value)
+	TrailVariables.enabled = value
+	if value and player.Character then
+		Trail_AddToCharacter(player.Character)
+		if TrailVariables.connection then TrailVariables.connection:Disconnect() end
+		TrailVariables.connection = RunService.Heartbeat:Connect(Trail_UpdateAll)
+	else
+		if player.Character then Trail_RemoveFromCharacter(player.Character) end
+		if TrailVariables.connection then TrailVariables.connection:Disconnect(); TrailVariables.connection = nil end
+	end
+end
+
+local function AuraTrailer_Toggle(enabled)
+	local character = player.Character
+	if not character then return end
+	local hrp = character:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+	for _, v in pairs(character:GetChildren()) do
+		if v:IsA("BasePart") and v ~= hrp then
+			if enabled then
+				if not v:FindFirstChild("AuraTrailer") then
+					local trail = Instance.new("Trail")
+					trail.Name = "AuraTrailer"
+					trail.Texture = "rbxassetid://1390780157"
+					trail.Parent = v
+					local p1 = Instance.new("Attachment", v); p1.Name = "AuraPointer1"
+					local p2 = Instance.new("Attachment", hrp); p2.Name = "AuraPointer2"
+					trail.Attachment0 = p1
+					trail.Attachment1 = p2
+					trail.Color = ColorSequence.new({
+						ColorSequenceKeypoint.new(0, AuraTrailerVariables.color),
+						ColorSequenceKeypoint.new(1, AuraTrailerVariables.color),
+					})
+					trail.Lifetime = AuraTrailerVariables.lifetime
+				end
+			else
+				if v:FindFirstChild("AuraTrailer") then v.AuraTrailer:Destroy() end
+				if v:FindFirstChild("AuraPointer1") then v.AuraPointer1:Destroy() end
+			end
+		end
+	end
+	if not enabled then
+		for _, obj in pairs(hrp:GetChildren()) do
+			if obj.Name == "AuraPointer2" then obj:Destroy() end
+		end
+	end
+end
+
+local function AuraTrailer_Update()
+	local character = player.Character
+	if not character then return end
+	for _, v in pairs(character:GetDescendants()) do
+		if v:IsA("Trail") and v.Name == "AuraTrailer" then
+			v.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, AuraTrailerVariables.color),
+				ColorSequenceKeypoint.new(1, AuraTrailerVariables.color),
+			})
+			v.Lifetime = AuraTrailerVariables.lifetime
+		end
+	end
+end
+
+local function ForceField_SaveOriginalColors(char)
+	ForceFieldVariables.originalColors[char] = {}
+	for _, part in pairs(char:GetDescendants()) do
+		if part:IsA("BasePart") and part.Name ~= "ChineseHat" then
+			ForceFieldVariables.originalColors[char][part] = { Color = part.Color, Material = part.Material }
+		end
+	end
+end
+
+local function ForceField_Apply(char)
+	ForceField_SaveOriginalColors(char)
+	for _, part in pairs(char:GetDescendants()) do
+		if part:IsA("BasePart") and part.Name ~= "ChineseHat" then
+			part.Color = ForceFieldVariables.color
+			part.Material = Enum.Material.ForceField
+		end
+	end
+end
+
+local function ForceField_Update()
+	if player.Character and ForceFieldVariables.enabled then
+		for _, part in pairs(player.Character:GetDescendants()) do
+			if part:IsA("BasePart") and part.Name ~= "ChineseHat" and part.Material == Enum.Material.ForceField then
+				part.Color = ForceFieldVariables.rainbow
+					and Color3.fromHSV(tick() % 5 / 5, 1, 1)
+					or ForceFieldVariables.color
+			end
+		end
+	end
+end
+
+local function ForceField_Remove(char)
+	if ForceFieldVariables.originalColors[char] then
+		for part, data in pairs(ForceFieldVariables.originalColors[char]) do
+			if part and part.Parent and part:IsA("BasePart") then
+				part.Color = data.Color
+				part.Material = data.Material
+			end
+		end
+		ForceFieldVariables.originalColors[char] = {}
+	end
+end
+
+local function ForceField_ToggleEnabled(value)
+	ForceFieldVariables.enabled = value
+	if player.Character then
+		if value then
+			ForceField_Apply(player.Character)
+			if ForceFieldVariables.connection then ForceFieldVariables.connection:Disconnect() end
+			ForceFieldVariables.connection = RunService.Heartbeat:Connect(ForceField_Update)
+		else
+			if ForceFieldVariables.connection then ForceFieldVariables.connection:Disconnect(); ForceFieldVariables.connection = nil end
+			ForceField_Remove(player.Character)
+		end
+	end
+end
+
+local function Skybox_Apply(name)
+	local sb = SkyboxAssets[name]
+	if not sb then return end
+	task.spawn(function() ContentProvider:PreloadAsync({ sb.Bk, sb.Dn, sb.Ft, sb.Lf, sb.Rt, sb.Up }) end)
+	local sky = Lighting:FindFirstChildOfClass("Sky")
+	if not sky then sky = Instance.new("Sky"); sky.Name = "Sky"; sky.Parent = Lighting end
+	sky.SkyboxBk = sb.Bk; sky.SkyboxDn = sb.Dn; sky.SkyboxFt = sb.Ft
+	sky.SkyboxLf = sb.Lf; sky.SkyboxRt = sb.Rt; sky.SkyboxUp = sb.Up
+end
+
+local function Skybox_RestoreDefault()
+	local sky = Lighting:FindFirstChildOfClass("Sky")
+	if sky and DefaultSkySettings.SkyboxBk then
+		sky.SkyboxBk = DefaultSkySettings.SkyboxBk; sky.SkyboxDn = DefaultSkySettings.SkyboxDn
+		sky.SkyboxFt = DefaultSkySettings.SkyboxFt; sky.SkyboxLf = DefaultSkySettings.SkyboxLf
+		sky.SkyboxRt = DefaultSkySettings.SkyboxRt; sky.SkyboxUp = DefaultSkySettings.SkyboxUp
+	elseif sky then
+		sky:Destroy()
+	end
+end
+
+local function ClassicAura_LoadModel(id)
+	local ok, result = pcall(function() return game:GetObjects(id)[1] end)
+	if not ok then return nil end
+	return result
+end
+
+local function ClassicAura_DisableOne(auraName)
+	if activeClassicAuras[auraName] then
+		for _, v in pairs(activeClassicAuras[auraName]) do
+			if v and v.Parent then pcall(function() v:Destroy() end) end
+		end
+		activeClassicAuras[auraName] = nil
+	end
+end
+
+local function ClassicAura_EnableOne(char, auraName)
+	if not char or not char.Parent then return end
+	ClassicAura_DisableOne(auraName)
+	local id = AuraModelIDs[auraName]
+	if not id then return end
+	local model = ClassicAura_LoadModel(id)
+	if not model then return end
+	local effects = {}
+	for _, obj in pairs(model:GetDescendants()) do
+		if not obj:IsA("BasePart") then
+			pcall(function()
+				local clone = obj:Clone()
+				local parentName = obj.Parent and obj.Parent.Name
+				local target = char:FindFirstChild(parentName)
+					or char:FindFirstChild("HumanoidRootPart")
+					or char:FindFirstChildWhichIsA("BasePart")
+				if target then
+					clone.Parent = target
+					table.insert(effects, clone)
+				end
+			end)
+		end
+	end
+	pcall(function() model:Destroy() end)
+	if #effects > 0 then activeClassicAuras[auraName] = effects end
+end
+
+local function ClassicAura_RefreshAll()
+	local char = player.Character
+	if not char then return end
+	for _, n in ipairs(AuraModels) do ClassicAura_DisableOne(n) end
+	if not classicAuraOn then return end
+	for name, on in pairs(classicAuraSelected) do
+		if on then task.spawn(function() ClassicAura_EnableOne(char, name) end) end
+	end
+end
+
+local function mapCharacterParts(character)
+	local parts = {}
+	for _, child in ipairs(character:GetChildren()) do
+		if child:IsA("BasePart") then parts[child.Name] = child end
+	end
+	return parts
+end
+
+local function getParticleAuraTemplate(name)
+	if loadedParticleAuras[name] then return loadedParticleAuras[name] end
+	local id = particleAuraIdByName[name]
+	if not id then return nil end
+	local ok, result = pcall(function() return game:GetObjects(id)[1] end)
+	if ok and result then loadedParticleAuras[name] = result; return result end
+	return nil
+end
+
+local function tintParticleSubtree(root, color)
+	if not color or not root then return end
+	local seq = ColorSequence.new(color)
+	local function tintOne(obj)
+		pcall(function()
+			if obj:IsA("ParticleEmitter") or obj:IsA("Beam") or obj:IsA("Trail") then
+				obj.Color = seq
+			elseif obj:IsA("PointLight") then
+				obj.Color = color
+			end
+		end)
+	end
+	tintOne(root)
+	for _, d in ipairs(root:GetDescendants()) do tintOne(d) end
+end
+
+local function setParticleEmittersEnabledInSubtree(root, enabled)
+	if not root then return end
+	pcall(function() if root:IsA("ParticleEmitter") then root.Enabled = enabled end end)
+	for _, d in ipairs(root:GetDescendants()) do
+		pcall(function() if d:IsA("ParticleEmitter") then d.Enabled = enabled end end)
+	end
+end
+
+local function applyParticleAuraToCharacter(character, auraName, color)
+	local auraObj = getParticleAuraTemplate(auraName)
+	if not auraObj then return {} end
+	local localParts = mapCharacterParts(character)
+	local cloned = auraObj:Clone()
+	local created = {}
+	for _, part in ipairs(cloned:GetChildren()) do
+		local targetPart = localParts[part.Name]
+		if targetPart then
+			for _, child in ipairs(part:GetChildren()) do
+				pcall(function()
+					local inst = child:Clone()
+					inst.Name = "LarpticAuraParticle"
+					inst.Parent = targetPart
+					if color then tintParticleSubtree(inst, color) end
+					table.insert(created, inst)
+				end)
+			end
+		end
+	end
+	pcall(function() cloned:Destroy() end)
+	for _, p in ipairs(created) do setParticleEmittersEnabledInSubtree(p, true) end
+	return created
+end
+
+local function ParticleAura_DisableOne(auraName)
+	if activeParticleAuras[auraName] then
+		for _, p in ipairs(activeParticleAuras[auraName]) do
+			if p then pcall(function() p:Destroy() end) end
+		end
+		activeParticleAuras[auraName] = nil
+	end
+end
+
+local function ParticleAura_RefreshAll()
+	local char = player.Character
+	if not char then return end
+	for _, n in ipairs(PARTICLE_AURA_NAMES) do ParticleAura_DisableOne(n) end
+	if not particleAuraOn then return end
+	for name, on in pairs(particleAuraSelected) do
+		if on then
+			task.spawn(function()
+				activeParticleAuras[name] = applyParticleAuraToCharacter(char, name, particleAuraColor)
+			end)
+		end
+	end
+end
+
+local function applyAtmosphere()
+	if not Atm.enabled then
+		if LarpticAtmosphere then pcall(function() LarpticAtmosphere:Destroy() end); LarpticAtmosphere = nil end
+		return
+	end
+	local atm = LarpticAtmosphere
+	if not (atm and atm.Parent) then
+		atm = Instance.new("Atmosphere")
+		atm.Name = "LarpticAtmosphere"
+		atm.Parent = Lighting
+		LarpticAtmosphere = atm
+	end
+	pcall(function()
+		atm.Density = Atm.density
+		atm.Offset = Atm.offset
+		atm.Haze = Atm.haze
+		atm.Glare = Atm.glare
+		atm.Color = Atm.color
+		atm.Decay = Atm.decay
+	end)
+end
+
+local function ensureMinecraftVariants()
+	if LarpticMaterialVariantsBuilt then return end
+	for name, data in pairs(MINECRAFT_VARIANTS) do
+		local variant = MaterialService:FindFirstChild(name)
+		if not variant then variant = Instance.new("MaterialVariant"); variant.Name = name; variant.Parent = MaterialService end
+		pcall(function()
+			variant.BaseMaterial = data.BaseMaterial
+			variant.ColorMap = data.Texture
+			variant.MetalnessMap = data.Texture
+			variant.NormalMap = data.Texture
+			variant.RoughnessMap = data.Texture
+			variant.MaterialPattern = Enum.MaterialPattern.Regular
+			variant.StudsPerTile = 5
+		end)
+	end
+	LarpticMaterialVariantsBuilt = true
+end
+
+local function rememberPartState(part)
+	if not LarpticTextureState[part] then
+		LarpticTextureState[part] = { Color = part.Color, Material = part.Material, MaterialVariant = part.MaterialVariant }
+	end
+end
+
+local function shouldSkipTexturePart(part)
+	if not part:IsDescendantOf(workspace) then return true end
+	if part.Name == "LarpticWeather" or part.Name == "Part" then return true end
+	local parent = part.Parent
+	if parent and (parent:IsA("Tool") or parent:IsA("Accessory")) then return true end
+	local model = part:FindFirstAncestorOfClass("Model")
+	if model and game.Players:GetPlayerFromCharacter(model) then return true end
+	return false
+end
+
+local function applyPartTexturePack()
+	ensureMinecraftVariants()
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("BasePart") and not shouldSkipTexturePart(obj) then
+			rememberPartState(obj)
+			local vn = MATERIAL_VARIANT_BY_MATERIAL[obj.Material]
+			if vn then pcall(function() obj.MaterialVariant = vn end) end
+		end
+	end
+end
+
+local function clearPartTexturePack()
+	for part, state in pairs(LarpticTextureState) do
+		if part and part.Parent and state then
+			pcall(function()
+				part.Color = state.Color
+				part.Material = state.Material
+				part.MaterialVariant = state.MaterialVariant or ""
+			end)
+		end
+	end
+end
+
+local function clearMinecraftVariants()
+	for name in pairs(MINECRAFT_VARIANTS) do
+		local v = MaterialService:FindFirstChild(name)
+		if v and v:IsA("MaterialVariant") then pcall(function() v:Destroy() end) end
+	end
+	LarpticMaterialVariantsBuilt = false
+end
+
+local function applyTexturePack()
+	local Terrain = workspace:FindFirstChildOfClass("Terrain")
+	if Terrain then
+		for mat, col in pairs(MINECRAFT_TERRAIN_COLORS) do
+			pcall(function() Terrain:SetMaterialColor(mat, col) end)
+		end
+	end
+	applyPartTexturePack()
+end
+
+local function clearTexturePack()
+	clearPartTexturePack()
+	clearMinecraftVariants()
+end
+
+local function Nebula_Enable()
+	local b = Instance.new("BloomEffect", Lighting)
+	b.Intensity = 0.7; b.Size = 24; b.Threshold = 1; b.Name = "NebulaBloom"
+	local c = Instance.new("ColorCorrectionEffect", Lighting)
+	c.Saturation = 0.5; c.Contrast = 0.2; c.TintColor = NebulaVariables.themeColor; c.Name = "NebulaColorCorrection"
+	local a = Instance.new("Atmosphere", Lighting)
+	a.Density = 0.4; a.Offset = 0.25; a.Glare = 1; a.Haze = 2
+	a.Color = NebulaVariables.themeColor; a.Decay = Color3.fromRGB(173, 216, 230); a.Name = "NebulaAtmosphere"
+	Lighting.Ambient = NebulaVariables.themeColor
+	Lighting.OutdoorAmbient = NebulaVariables.themeColor
+	Lighting.FogStart = 100; Lighting.FogEnd = 500; Lighting.FogColor = NebulaVariables.themeColor
+end
+
+local function Nebula_Disable()
+	for _, name in pairs({ "NebulaBloom", "NebulaColorCorrection", "NebulaAtmosphere" }) do
+		local obj = Lighting:FindFirstChild(name)
+		if obj then obj:Destroy() end
+	end
+	Lighting.Ambient = defaultLighting.Ambient
+	Lighting.OutdoorAmbient = defaultLighting.OutdoorAmbient
+	Lighting.FogStart = defaultLighting.FogStart
+	Lighting.FogEnd = defaultLighting.FogEnd
+	Lighting.FogColor = defaultLighting.FogColor
+end
+
+local function Nebula_UpdateColor()
+	if NebulaVariables.enabled then
+		local nc = Lighting:FindFirstChild("NebulaColorCorrection")
+		if nc then nc.TintColor = NebulaVariables.themeColor end
+		local na = Lighting:FindFirstChild("NebulaAtmosphere")
+		if na then na.Color = NebulaVariables.themeColor end
+		Lighting.Ambient = NebulaVariables.themeColor
+		Lighting.OutdoorAmbient = NebulaVariables.themeColor
+		Lighting.FogColor = NebulaVariables.themeColor
+	end
+end
+
+local function Screen_Toggle(value)
+	WorldVariables.screenEnabled = value
+	if value then
+		WorldVariables.screenConnection = RunService.RenderStepped:Connect(function()
+			camera.CFrame = camera.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, (0.65 + WorldVariables.screenIntensity), 0, 0, 0, 1)
+		end)
+	else
+		if WorldVariables.screenConnection then
+			WorldVariables.screenConnection:Disconnect()
+			WorldVariables.screenConnection = nil
+		end
+	end
+end
+
+local function Anime_Toggle(value)
+	AnimeVariables.enabled = value
+	if value then
+		if AnimeVariables.gui then AnimeVariables.gui:Destroy() end
+		AnimeVariables.gui = Instance.new("ScreenGui", player.PlayerGui)
+		AnimeVariables.gui.Name = "AnimeImageGui"
+		AnimeVariables.gui.ResetOnSpawn = false
+		local imageLabel = Instance.new("ImageLabel", AnimeVariables.gui)
+		imageLabel.Name = "AnimeImage"
+		imageLabel.Image = "http://www.roblox.com/asset/?id=117783035423570"
+		imageLabel.Size = UDim2.new(0, 350, 0, 400)
+		imageLabel.Position = UDim2.new(1, -25, 0, 10)
+		imageLabel.AnchorPoint = Vector2.new(1, 0)
+		imageLabel.BackgroundTransparency = 1
+	else
+		if AnimeVariables.gui then AnimeVariables.gui:Destroy(); AnimeVariables.gui = nil end
+	end
+end
+
+local function buyPine(n)
+	task.spawn(function()
+		for _ = 1, n do
+			pcall(function() workspace.ItemBoughtFromShop:InvokeServer("PineTree", 1) end)
+			task.wait(0.05)
+		end
+	end)
+end
+
+-- =========================================================
+-- WINDOW
+-- =========================================================
+local Window = Noir:CreateWindow({
+	Name = "PREMIUM MENU",
+	Size = Vector2.new(560, 420),
+})
+Window.Name = "PREMIUM MENU"
+
+local function notify(msg, t)
+	Window:Notify(msg, t or 2)
+end
+
+local Main = Window:Tab("Main")
+local Combat = Window:Tab("Combat")
+local Move = Window:Tab("Movement")
+local Farm = Window:Tab("Farm")
+local Shop = Window:Tab("Shop")
+local Visual = Window:Tab("Visual")
+local World = Window:Tab("World")
+local Settings = Window:Tab("Settings")
+
+local farmToggle
+
+-- MAIN
+Main:Label({ Name = "создатель: Дмитрий  |  тг: BongoS1n" })
+Main:Label({ Name = "BETA 0.3  |  RightShift = меню" })
+Main:Separator()
+Main:Button({
+	Name = "Respawn",
+	SCRIPT = function()
+		local hum = player.Character and player.Character:FindFirstChild("Humanoid")
+		if hum then hum.Health = 0 end
+	end,
+})
+Main:Button({
+	Name = "Rejoin",
+	SCRIPT = function()
+		TeleportService:Teleport(game.PlaceId, player)
+	end,
+})
+Main:Toggle({
+	Name = "Anti-AFK",
+	Default = true,
+	SCRIPT = function(Value)
+		BTB.AntiAFK = Value
+		if Value then
+			task.spawn(function()
+				while BTB.AntiAFK do
+					pcall(function()
+						VirtualUser:Button2Down(Vector2.new(0, 0), camera.CFrame)
+						task.wait(1)
+						VirtualUser:Button2Up(Vector2.new(0, 0), camera.CFrame)
+					end)
+					task.wait(60)
+				end
+			end)
+		end
+	end,
+})
+Main:Separator()
+Main:Button({
+	Name = "DESTROY ALL MENU",
+	SCRIPT = function()
+		autoFarmActive = false
+		removePlatform()
+		setClickTP(false)
+		Window:Destroy()
+	end,
+})
+
+-- COMBAT
+Combat:Label({ Name = "combat" })
+Combat:Toggle({
+	Name = "God Mode",
+	Default = false,
+	SCRIPT = function(Value)
+		BTB.GodMode = Value
+		if Value then
+			task.spawn(function()
+				while BTB.GodMode do
+					local hum = player.Character and player.Character:FindFirstChild("Humanoid")
+					if hum then hum.Health = hum.MaxHealth end
+					task.wait(0.01)
+				end
+			end)
+		end
+	end,
+})
+Combat:Toggle({
+	Name = "Anti Knockback",
+	Default = false,
+	SCRIPT = function(Value)
+		BTB.AntiKB = Value
+		local hum = player.Character and player.Character:FindFirstChild("Humanoid")
+		if hum then
+			hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, not Value)
+			hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, not Value)
+		end
+	end,
+})
+
+-- MOVEMENT
+Move:Label({ Name = "speed / noclip / tp" })
+Move:Toggle({
+	Name = "Speed Hack",
+	Default = false,
+	SCRIPT = function(Value)
+		BTB.SpeedEnabled = Value
+		if Value then
+			task.spawn(function()
+				while BTB.SpeedEnabled do
+					local hum = player.Character and player.Character:FindFirstChild("Humanoid")
+					if hum then hum.WalkSpeed = BTB.SpeedValue end
+					task.wait(0.1)
+				end
+			end)
+		else
+			local hum = player.Character and player.Character:FindFirstChild("Humanoid")
+			if hum then hum.WalkSpeed = 16 end
+		end
+	end,
+})
+Move:Slider({
+	Name = "Speed Value",
+	Min = 16, Max = 500, Default = 100, Decimals = 0,
+	SCRIPT = function(Value) BTB.SpeedValue = Value end,
+})
+Move:Toggle({
+	Name = "Noclip",
+	Default = false,
+	SCRIPT = function(Value)
+		BTB.Noclip = Value
+		if Value then
+			BTB.NoclipConn = RunService.Stepped:Connect(function()
+				if player.Character then
+					for _, p in pairs(player.Character:GetDescendants()) do
+						if p:IsA("BasePart") then p.CanCollide = false end
+					end
+				end
+			end)
+		else
+			if BTB.NoclipConn then BTB.NoclipConn:Disconnect(); BTB.NoclipConn = nil end
+		end
+	end,
+})
+Move:Toggle({
+	Name = "Infinite Jump",
+	Default = false,
+	SCRIPT = function(Value)
+		BTB.InfJump = Value
+		if Value then
+			BTB.JumpConn = UserInputService.JumpRequest:Connect(function()
+				if BTB.InfJump then
+					local hum = player.Character and player.Character:FindFirstChild("Humanoid")
+					if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+				end
+			end)
+		else
+			if BTB.JumpConn then BTB.JumpConn:Disconnect(); BTB.JumpConn = nil end
+		end
+	end,
+})
+Move:Separator()
+Move:Toggle({
+	Name = "Click TP",
+	Default = false,
+	SCRIPT = function(Value)
+		setClickTP(Value)
+		notify(Value and "CLICK TP: ON" or "CLICK TP: OFF")
+	end,
+})
+
+-- FARM (Dmitry)
+Farm:Label({ Name = "auto farm | точки до сундука" })
+farmToggle = Farm:Toggle({
+	Name = "Auto Farm",
+	Default = false,
+	SCRIPT = function(Value)
+		autoFarmActive = Value
+		if Value then
+			task.spawn(loopAutoFarm)
+			notify("AUTO FARM: ON")
+		else
+			removePlatform()
+			farmStatusText = "Stopped"
+			notify("AUTO FARM: OFF")
+		end
+	end,
+})
+
+-- SHOP (Dmitry products + gift)
+Shop:Label({ Name = "подарки" })
+Shop:TextBox({
+	Name = "ник",
+	Placeholder = "точный ник игрока...",
+	SCRIPT = function(Value)
+		giftTargetName = Value or ""
+	end,
+})
+Shop:Dropdown({
+	Name = "предмет",
+	Options = giftNames,
+	Default = "выбери предмет",
+	SCRIPT = function(Value)
+		selectedGiftName = Value
+		selectedGiftId = giftIdByName[Value]
+	end,
+})
+Shop:Button({
+	Name = "SEND GIFT",
+	SCRIPT = function()
+		local ok, msg = sendGift()
+		notify((ok and "✔️ " or "❌ ") .. msg)
+	end,
+})
+Shop:Separator()
+Shop:Label({ Name = "покупка себе" })
+Shop:Button({
+	Name = "+3 Egg Cannons",
+	SCRIPT = function()
+		safeInvoke(1161573715, "Product")
+		notify("+3 Egg Cannons")
+	end,
+})
+Shop:Button({
+	Name = "+4 Cookie Wheels",
+	SCRIPT = function()
+		safeInvoke(1126385328, "Product")
+		notify("+4 Cookie Wheels")
+	end,
+})
+Shop:Button({
+	Name = "+5 Duel Harpoons",
+	SCRIPT = function()
+		safeInvoke(915766549, "Product")
+		notify("+5 Duel Harpoons")
+	end,
+})
+Shop:Button({
+	Name = "+5 Dragon Harpoons",
+	SCRIPT = function()
+		safeInvoke(1109792341, "Product")
+		notify("+5 Dragon Harpoons")
+	end,
+})
+Shop:Button({
+	Name = "+5 Mega Thrusters",
+	SCRIPT = function()
+		safeInvoke(139121474, "Product")
+		notify("+5 Mega Thrusters")
+	end,
+})
+Shop:Separator()
+Shop:Label({ Name = "pine tree" })
+Shop:Button({
+	Name = "Buy Pine Tree x1",
+	SCRIPT = function()
+		buyPine(1)
+		notify("1x Pine Tree")
+	end,
+})
+Shop:Button({
+	Name = "Buy Pine Tree x5",
+	SCRIPT = function()
+		buyPine(5)
+		notify("5x Pine Tree")
+	end,
+})
+Shop:Button({
+	Name = "Buy Pine Tree x25",
+	SCRIPT = function()
+		buyPine(25)
+		notify("25x Pine Tree")
+	end,
+})
+Shop:Slider({
+	Name = "Custom Amount",
+	Min = 1, Max = 500, Default = 50, Decimals = 0,
+	SCRIPT = function(Value) pineAmount = math.floor(Value) end,
+})
+Shop:Button({
+	Name = "Buy Pine Tree (Custom)",
+	SCRIPT = function()
+		local amt = math.clamp(math.floor(pineAmount), 1, 500)
+		notify("Buying " .. amt .. "x Pine Tree...")
+		buyPine(amt)
+	end,
+})
+Shop:Toggle({
+	Name = "Auto Buy Pine Tree",
+	Default = false,
+	SCRIPT = function(Value)
+		pineAuto = Value
+		if Value then
+			task.spawn(function()
+				local bought = 0
+				while pineAuto do
+					pcall(function() workspace.ItemBoughtFromShop:InvokeServer("PineTree", 1) end)
+					bought = bought + 1
+					if bought % 20 == 0 then notify("Auto Pine: " .. bought, 1) end
+					task.wait(0.1)
+				end
+			end)
+		end
+	end,
+})
+Shop:Separator()
+Shop:Label({ Name = "teleports" })
+Shop:Button({
+	Name = "Easter Event Place",
+	SCRIPT = function() TeleportService:Teleport(1930863474) end,
+})
+Shop:Button({
+	Name = "Christmas Event Place",
+	SCRIPT = function() TeleportService:Teleport(1930866268) end,
+})
+Shop:Button({
+	Name = "Test Place",
+	SCRIPT = function() TeleportService:Teleport(1930665568) end,
+})
+Shop:Separator()
+Shop:Label({ Name = "dupe build" })
+Shop:Slider({
+	Name = "Dupe Amount",
+	Min = 1, Max = 50, Default = 10, Decimals = 0,
+	SCRIPT = function(Value) dupeAmount = math.floor(Value) end,
+})
+Shop:Slider({
+	Name = "Slot",
+	Min = 1, Max = 99, Default = 42, Decimals = 0,
+	SCRIPT = function(Value) dupeSlot = math.floor(Value) end,
+})
+Shop:Button({
+	Name = "Dupe Build",
+	SCRIPT = function()
+		notify("Duping " .. dupeAmount .. "x from slot " .. dupeSlot)
+		task.spawn(function()
+			for _ = 1, dupeAmount do
+				pcall(function() workspace.LoadBoatData:FireServer(dupeSlot, 0) end)
+				task.wait(0.05)
+			end
+			notify("Dupe done! " .. dupeAmount .. "x")
+		end)
+	end,
+})
+
+-- VISUAL
+
+-- ===================== ФОНЫ МЕНЮ =====================
+-- вставь в КОНЕЦ основного скрипта
+
+local MIMI_IDS = {
+	"rbxassetid://18418069384",
+	"rbxassetid://119493978273308",
+	"rbxassetid://94218403253945",
+	"rbxassetid://113950241639124",
+	"rbxassetid://95850014385199",
+}
+
+local BG_LIST = {
+	"None",
+	"Soft",
+	"Grid",
+	"Scanlines",
+	"Gradient",
+	"Dots",
+	"Gold",
+	"Mimi Typh",
+}
+
+local noirGui = player.PlayerGui:FindFirstChild("NoirUI")
+local winFrame = noirGui and noirGui:FindFirstChild("Window")
+if not winFrame then
+	warn("[BG] NoirUI не найден — вставь этот кусок в конец основного скрипта")
+	return
+end
+
+local body = winFrame:FindFirstChild("Body")
+local pagesFrame = body and body:FindFirstChild("Pages")
+
+if winFrame:FindFirstChild("NoirBG") then winFrame.NoirBG:Destroy() end
+if body and body:FindFirstChild("NoirBG") then body.NoirBG:Destroy() end
+if body and body:FindFirstChild("NoirBGDim") then body.NoirBGDim:Destroy() end
+
+local bgLayer = Instance.new("Frame")
+bgLayer.Name = "NoirBG"
+bgLayer.BackgroundTransparency = 1
+bgLayer.BorderSizePixel = 0
+bgLayer.Size = UDim2.fromScale(1, 1)
+bgLayer.ZIndex = 1
+bgLayer.ClipsDescendants = true
+bgLayer.Parent = body or winFrame
+
+local bgDim = Instance.new("Frame")
+bgDim.Name = "NoirBGDim"
+bgDim.BackgroundColor3 = Color3.new(0, 0, 0)
+bgDim.BackgroundTransparency = 1
+bgDim.BorderSizePixel = 0
+bgDim.Size = UDim2.fromScale(1, 1)
+bgDim.ZIndex = 2
+bgDim.Parent = body or winFrame
+
+local currentBg = "None"
+local bgStrength = 0.7
+
+local function clearBg()
+	for _, c in ipairs(bgLayer:GetChildren()) do
+		c:Destroy()
+	end
+end
+
+local function setContentTransparent(on)
+	if body then
+		body.BackgroundTransparency = on and 1 or 0
+	end
+	if pagesFrame then
+		pagesFrame.BackgroundTransparency = on and 1 or 0
+	end
+end
+
+local function addFull(parent, props)
+	local f = Instance.new("Frame")
+	f.BackgroundColor3 = props.Color or Color3.new(1, 1, 1)
+	f.BackgroundTransparency = props.Transparency or 0
+	f.BorderSizePixel = 0
+	f.Size = props.Size or UDim2.fromScale(1, 1)
+	f.Position = props.Position or UDim2.new()
+	f.ZIndex = 1
+	f.Parent = parent
+	if props.Gradient then
+		local g = Instance.new("UIGradient")
+		g.Color = props.Gradient
+		g.Rotation = props.Rotation or 90
+		g.Parent = f
+	end
+	return f
+end
+
+local function buildSoft()
+	addFull(bgLayer, {
+		Color = Color3.fromRGB(18, 18, 22),
+		Transparency = 0,
+		Gradient = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 22, 28)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 8, 10)),
+		}),
+		Rotation = 160,
+	})
+end
+
+local function buildGrid()
+	addFull(bgLayer, { Color = Color3.fromRGB(10, 10, 10), Transparency = 0 })
+	for i = 1, 16 do
+		local v = Instance.new("Frame")
+		v.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		v.BackgroundTransparency = 0.92
+		v.BorderSizePixel = 0
+		v.Size = UDim2.new(0, 1, 1, 0)
+		v.Position = UDim2.fromScale(i / 16, 0)
+		v.ZIndex = 1
+		v.Parent = bgLayer
+	end
+	for i = 1, 12 do
+		local h = Instance.new("Frame")
+		h.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		h.BackgroundTransparency = 0.92
+		h.BorderSizePixel = 0
+		h.Size = UDim2.new(1, 0, 0, 1)
+		h.Position = UDim2.fromScale(0, i / 12)
+		h.ZIndex = 1
+		h.Parent = bgLayer
+	end
+end
+
+local function buildScanlines()
+	addFull(bgLayer, { Color = Color3.fromRGB(8, 8, 8), Transparency = 0 })
+	for i = 0, 90 do
+		local line = Instance.new("Frame")
+		line.BackgroundColor3 = Color3.fromRGB(180, 180, 180)
+		line.BackgroundTransparency = 0.88
+		line.BorderSizePixel = 0
+		line.Size = UDim2.new(1, 0, 0, 1)
+		line.Position = UDim2.fromOffset(0, i * 5)
+		line.ZIndex = 1
+		line.Parent = bgLayer
+	end
+end
+
+local function buildGradient()
+	addFull(bgLayer, {
+		Color = Color3.fromRGB(255, 255, 255),
+		Transparency = 0,
+		Gradient = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(12, 10, 28)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(40, 18, 70)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(6, 6, 10)),
+		}),
+		Rotation = 135,
+	})
+end
+
+local function buildDots()
+	addFull(bgLayer, { Color = Color3.fromRGB(9, 9, 9), Transparency = 0 })
+	for y = 0, 18 do
+		for x = 0, 22 do
+			local d = Instance.new("Frame")
+			d.BackgroundColor3 = Color3.fromRGB(220, 220, 220)
+			d.BackgroundTransparency = 0.84
+			d.BorderSizePixel = 0
+			d.Size = UDim2.fromOffset(3, 3)
+			d.Position = UDim2.new(0, 10 + x * 22, 0, 8 + y * 22)
+			d.ZIndex = 1
+			d.Parent = bgLayer
+			local c = Instance.new("UICorner")
+			c.CornerRadius = UDim.new(1, 0)
+			c.Parent = d
+		end
+	end
+end
+
+local function buildGold()
+	addFull(bgLayer, {
+		Color = Color3.fromRGB(255, 255, 255),
+		Transparency = 0,
+		Gradient = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(18, 14, 8)),
+			ColorSequenceKeypoint.new(0.45, Color3.fromRGB(70, 48, 16)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 8, 8)),
+		}),
+		Rotation = 120,
+	})
+	for i = 0, 10 do
+		local line = Instance.new("Frame")
+		line.BackgroundColor3 = Color3.fromRGB(218, 165, 32)
+		line.BackgroundTransparency = 0.9
+		line.BorderSizePixel = 0
+		line.Size = UDim2.new(1, 80, 0, 2)
+		line.Rotation = 25
+		line.Position = UDim2.fromOffset(-40, i * 42)
+		line.ZIndex = 1
+		line.Parent = bgLayer
+	end
+end
+
+local function buildMimi()
+	local cols, rows = 4, 3
+	for i = 1, cols * rows do
+		local r = math.floor((i - 1) / cols)
+		local c = (i - 1) % cols
+		local img = Instance.new("ImageLabel")
+		img.Name = "Mimi"
+		img.BackgroundTransparency = 1
+		img.BorderSizePixel = 0
+		img.Image = MIMI_IDS[((i - 1) % #MIMI_IDS) + 1]
+		img.ScaleType = Enum.ScaleType.Crop
+		img.Size = UDim2.fromScale(1 / cols, 1 / rows)
+		img.Position = UDim2.fromScale(c / cols, r / rows)
+		img.ImageTransparency = math.clamp(1 - bgStrength, 0.05, 0.85)
+		img.ZIndex = 1
+		img.Parent = bgLayer
+	end
+	pcall(function()
+		game:GetService("ContentProvider"):PreloadAsync(MIMI_IDS)
+	end)
+end
+
+local builders = {
+	["None"] = function() end,
+	["Soft"] = buildSoft,
+	["Grid"] = buildGrid,
+	["Scanlines"] = buildScanlines,
+	["Gradient"] = buildGradient,
+	["Dots"] = buildDots,
+	["Gold"] = buildGold,
+	["Mimi Typh"] = buildMimi,
+}
+
+local function applyBackground(name)
+	currentBg = name or "None"
+	clearBg()
+	if currentBg == "None" then
+		setContentTransparent(false)
+		bgDim.BackgroundTransparency = 1
+		return
+	end
+	setContentTransparent(true)
+	local fn = builders[currentBg]
+	if fn then fn() end
+	if currentBg == "Mimi Typh" then
+		bgDim.BackgroundTransparency = 0.25 + (1 - bgStrength) * 0.5
+	else
+		bgDim.BackgroundTransparency = 0.35 + (1 - bgStrength) * 0.4
+	end
+end
+
+Settings:Separator()
+Settings:Label({ Name = "фон меню" })
+Settings:Dropdown({
+	Name = "Background",
+	Options = BG_LIST,
+	Default = "None",
+	SCRIPT = function(Value)
+		applyBackground(Value)
+	end,
+})
+Settings:Slider({
+	Name = "сила фона",
+	Min = 0.15,
+	Max = 1,
+	Default = 0.7,
+	Decimals = 2,
+	SCRIPT = function(Value)
+		bgStrength = Value
+		applyBackground(currentBg)
+	end,
+})
+
+applyBackground("None")
+print("[BG] фоны меню готовы | Mimi Typh в Settings")
+
+Visual:Label({ Name = "chinese hat" })
+Visual:Toggle({ Name = "Enable Hat", Default = false, SCRIPT = function(Value) Hat_ToggleEnabled(Value) end })
+Visual:Dropdown({
+	Name = "Hat Style",
+	Options = { "Classic", "Drawing" },
+	Default = "Classic",
+	SCRIPT = function(Value) Hat_ChangeStyle(Value) end,
+})
+Visual:Toggle({ Name = "Rainbow Mode", Default = false, SCRIPT = function(Value) HatVariables.rainbow = Value end })
+Visual:Slider({ Name = "Rainbow Speed", Min = 1, Max = 20, Default = 5, Decimals = 0, SCRIPT = function(Value) HatVariables.rainbowSpeed = Value end })
+Visual:Slider({ Name = "Transparency", Min = 0, Max = 1, Default = 0.3, Decimals = 2, SCRIPT = function(Value) HatVariables.transparency = Value end })
+Visual:Slider({ Name = "Radius", Min = 0.5, Max = 10, Default = 2.4, Decimals = 1, SCRIPT = function(Value) HatVariables.radius = Value end })
+Visual:Slider({ Name = "Height", Min = 0.5, Max = 5, Default = 1.6, Decimals = 1, SCRIPT = function(Value) HatVariables.height = Value end })
+Visual:Slider({ Name = "Reflectance", Min = 0, Max = 1, Default = 0, Decimals = 2, SCRIPT = function(Value) HatVariables.reflectance = Value end })
+Visual:Slider({ Name = "Sides (Drawing)", Min = 3, Max = 300, Default = 25, Decimals = 0, SCRIPT = function(Value) Hat_UpdateSides(Value) end })
+Visual:ColorPicker({ Name = "Hat Color", Default = Color3.fromRGB(0, 255, 255), SCRIPT = function(Value) HatVariables.color = Value end })
+
+Visual:Separator()
+Visual:Label({ Name = "trail" })
+Visual:Toggle({ Name = "Enable Trail", Default = false, SCRIPT = function(Value) Trail_ToggleEnabled(Value) end })
+Visual:Toggle({
+	Name = "Gradient Mode",
+	Default = false,
+	SCRIPT = function(Value)
+		TrailVariables.isGradient = Value
+		if TrailVariables.enabled and player.Character then Trail_AddToCharacter(player.Character) end
+	end,
+})
+Visual:Slider({ Name = "Lifetime", Min = 0.1, Max = 3, Default = 0.5, Decimals = 1, SCRIPT = function(Value) TrailVariables.lifetime = Value; Trail_UpdateAll() end })
+Visual:Slider({ Name = "Start Transparency", Min = 0, Max = 1, Default = 0, Decimals = 2, SCRIPT = function(Value) TrailVariables.transparencyStart = Value; Trail_UpdateAll() end })
+Visual:Toggle({ Name = "Rainbow (Static)", Default = false, SCRIPT = function(Value) TrailVariables.rainbow = Value; Trail_UpdateAll() end })
+Visual:ColorPicker({ Name = "Static Color", Default = Color3.fromRGB(0, 255, 255), SCRIPT = function(Value) TrailVariables.colorStatic = Value; Trail_UpdateAll() end })
+Visual:ColorPicker({ Name = "Gradient 1", Default = Color3.fromRGB(0, 86, 255), SCRIPT = function(Value) TrailVariables.gradient1 = Value; Trail_UpdateAll() end })
+Visual:ColorPicker({ Name = "Gradient 2", Default = Color3.fromRGB(255, 0, 0), SCRIPT = function(Value) TrailVariables.gradient2 = Value; Trail_UpdateAll() end })
+
+Visual:Separator()
+Visual:Label({ Name = "forcefield" })
+Visual:Toggle({ Name = "Enable ForceField", Default = false, SCRIPT = function(Value) ForceField_ToggleEnabled(Value) end })
+Visual:Toggle({ Name = "Rainbow Mode", Default = false, SCRIPT = function(Value) ForceFieldVariables.rainbow = Value; ForceField_Update() end })
+Visual:ColorPicker({
+	Name = "FF Color",
+	Default = Color3.fromRGB(128, 128, 128),
+	SCRIPT = function(Value)
+		ForceFieldVariables.color = Value
+		if ForceFieldVariables.enabled and not ForceFieldVariables.rainbow and player.Character then
+			ForceField_Apply(player.Character)
+		end
+	end,
+})
+
+Visual:Separator()
+Visual:Label({ Name = "aura trailer" })
+Visual:Toggle({
+	Name = "Enable Aura Trailer",
+	Default = false,
+	SCRIPT = function(Value)
+		AuraTrailerVariables.enabled = Value
+		AuraTrailer_Toggle(Value)
+	end,
+})
+Visual:ColorPicker({
+	Name = "Trailer Color",
+	Default = Color3.fromRGB(255, 0, 0),
+	SCRIPT = function(Value)
+		AuraTrailerVariables.color = Value
+		if AuraTrailerVariables.enabled then AuraTrailer_Update() end
+	end,
+})
+Visual:Slider({
+	Name = "Trailer Lifetime",
+	Min = 0.1, Max = 3, Default = 0.5, Decimals = 1,
+	SCRIPT = function(Value)
+		AuraTrailerVariables.lifetime = Value
+		if AuraTrailerVariables.enabled then AuraTrailer_Update() end
+	end,
+})
+
+Visual:Separator()
+Visual:Label({ Name = "classic aura" })
+Visual:Toggle({
+	Name = "Enable Classic Aura",
+	Default = false,
+	SCRIPT = function(Value) classicAuraOn = Value; ClassicAura_RefreshAll() end,
+})
+Visual:Dropdown({
+	Name = "Select Auras",
+	Options = AuraModels,
+	Multi = true,
+	Default = {},
+	SCRIPT = function(Value) classicAuraSelected = Value; ClassicAura_RefreshAll() end,
+})
+
+Visual:Separator()
+Visual:Label({ Name = "particle aura" })
+Visual:Toggle({
+	Name = "Enable Particle Aura",
+	Default = false,
+	SCRIPT = function(Value) particleAuraOn = Value; ParticleAura_RefreshAll() end,
+})
+Visual:ColorPicker({
+	Name = "Aura Color",
+	Default = Color3.fromRGB(133, 220, 255),
+	SCRIPT = function(Value) particleAuraColor = Value; ParticleAura_RefreshAll() end,
+})
+Visual:Dropdown({
+	Name = "Select Particles",
+	Options = PARTICLE_AURA_NAMES,
+	Multi = true,
+	Default = {},
+	SCRIPT = function(Value) particleAuraSelected = Value; ParticleAura_RefreshAll() end,
+})
+
+Visual:Separator()
+Visual:Label({ Name = "screen / utils" })
+Visual:Toggle({ Name = "Screen Effect", Default = false, SCRIPT = function(Value) Screen_Toggle(Value) end })
+Visual:Slider({ Name = "Screen Stretch", Min = 0, Max = 0.2, Default = 0, Decimals = 3, SCRIPT = function(Value) WorldVariables.screenIntensity = Value end })
+Visual:Toggle({ Name = "Anime Image", Default = false, SCRIPT = function(Value) Anime_Toggle(Value) end })
+Visual:Button({
+	Name = "FPS/Ping Counter 1",
+	SCRIPT = function()
+		if not FPSVariables.fpsPing1Enabled then
+			pcall(function()
+				loadstring(game:HttpGet("https://raw.githubusercontent.com/GLAMOHGA/fling/refs/heads/main/хз%20как%20назвать%20типо%20фпс%20и%20пинг.md"))()
+			end)
+			FPSVariables.fpsPing1Enabled = true
+		end
+	end,
+})
+Visual:Button({
+	Name = "FPS/Ping Counter 2",
+	SCRIPT = function()
+		if not FPSVariables.fpsPing2Enabled then
+			pcall(function()
+				loadstring(game:HttpGet("https://raw.githubusercontent.com/VetrexTheBest/Fps-ping/refs/heads/main/fps%2Bping.txt"))()
+			end)
+			FPSVariables.fpsPing2Enabled = true
+		end
+	end,
+})
+
+-- WORLD
+local skyboxList = {}
+for k in pairs(SkyboxAssets) do table.insert(skyboxList, k) end
+table.sort(skyboxList)
+
+World:Label({ Name = "skybox" })
+World:Dropdown({
+	Name = "Select Skybox",
+	Options = skyboxList,
+	Default = "HD",
+	SCRIPT = function(Value)
+		SkyboxVariables.current = Value
+		if SkyboxVariables.customEnabled then Skybox_Apply(Value) end
+	end,
+})
+World:Toggle({
+	Name = "Enable Skybox",
+	Default = false,
+	SCRIPT = function(Value)
+		SkyboxVariables.customEnabled = Value
+		if Value then Skybox_Apply(SkyboxVariables.current) else Skybox_RestoreDefault() end
+	end,
+})
+World:Separator()
+World:Label({ Name = "lighting" })
+World:Toggle({ Name = "Time Changer", Default = false, SCRIPT = function(Value) WorldVariables.timeEnabled = Value end })
+World:Slider({ Name = "Time (0-24)", Min = 0, Max = 24, Default = 12, Decimals = 1, SCRIPT = function(Value) WorldVariables.timeValue = Value end })
+World:Toggle({
+	Name = "Full Bright",
+	Default = false,
+	SCRIPT = function(Value)
+		WorldVariables.fullBrightEnabled = Value
+		if not Value then
+			Lighting.Brightness = defaultLighting.Brightness
+			Lighting.GlobalShadows = defaultLighting.GlobalShadows
+			Lighting.OutdoorAmbient = defaultLighting.OutdoorAmbient
+		end
+	end,
+})
+World:Slider({ Name = "FOV", Min = 30, Max = 120, Default = 70, Decimals = 0, SCRIPT = function(Value) camera.FieldOfView = Value end })
+World:Separator()
+World:Label({ Name = "atmosphere" })
+World:Toggle({
+	Name = "Atmosphere",
+	Default = false,
+	SCRIPT = function(Value)
+		Atm.enabled = Value
+		if Value then applyAtmosphere()
+		else
+			if LarpticAtmosphere then pcall(function() LarpticAtmosphere:Destroy() end); LarpticAtmosphere = nil end
+		end
+	end,
+})
+World:ColorPicker({ Name = "Atm Color", Default = Color3.fromRGB(199, 212, 255), SCRIPT = function(Value) Atm.color = Value; if Atm.enabled then applyAtmosphere() end end })
+World:ColorPicker({ Name = "Atm Decay", Default = Color3.fromRGB(106, 112, 125), SCRIPT = function(Value) Atm.decay = Value; if Atm.enabled then applyAtmosphere() end end })
+World:Slider({ Name = "Haze", Min = 0, Max = 10, Default = 1, Decimals = 1, SCRIPT = function(Value) Atm.haze = Value; if Atm.enabled then applyAtmosphere() end end })
+World:Slider({ Name = "Glare", Min = 0, Max = 10, Default = 10, Decimals = 1, SCRIPT = function(Value) Atm.glare = Value; if Atm.enabled then applyAtmosphere() end end })
+World:Slider({ Name = "Offset", Min = 0, Max = 1, Default = 0, Decimals = 2, SCRIPT = function(Value) Atm.offset = Value; if Atm.enabled then applyAtmosphere() end end })
+World:Slider({ Name = "Density", Min = 0, Max = 1, Default = 0.35, Decimals = 2, SCRIPT = function(Value) Atm.density = Value; if Atm.enabled then applyAtmosphere() end end })
+World:Separator()
+World:Toggle({
+	Name = "Minecraft Textures",
+	Default = false,
+	SCRIPT = function(Value) if Value then applyTexturePack() else clearTexturePack() end end,
+})
+World:Separator()
+World:Label({ Name = "nebula" })
+World:Toggle({
+	Name = "Enable Nebula",
+	Default = false,
+	SCRIPT = function(Value)
+		NebulaVariables.enabled = Value
+		if Value then Nebula_Enable() else Nebula_Disable() end
+	end,
+})
+World:ColorPicker({
+	Name = "Nebula Color",
+	Default = Color3.fromRGB(173, 216, 230),
+	SCRIPT = function(Value) NebulaVariables.themeColor = Value; Nebula_UpdateColor() end,
+})
+
+-- SETTINGS
+Settings:Label({ Name = "RightShift — скрыть/показать" })
+Settings:Button({
+	Name = "Unload Script",
+	SCRIPT = function()
+		autoFarmActive = false
+		removePlatform()
+		setClickTP(false)
+		BTB.GodMode = false
+		BTB.SpeedEnabled = false
+		BTB.AntiAFK = false
+		pineAuto = false
+		Hat_ToggleEnabled(false)
+		Trail_ToggleEnabled(false)
+		ForceField_ToggleEnabled(false)
+		AuraTrailer_Toggle(false)
+		Screen_Toggle(false)
+		Anime_Toggle(false)
+		if BTB.NoclipConn then BTB.NoclipConn:Disconnect() end
+		if BTB.JumpConn then BTB.JumpConn:Disconnect() end
+		Nebula_Disable()
+		Skybox_RestoreDefault()
+		clearTexturePack()
+		if LarpticAtmosphere then pcall(function() LarpticAtmosphere:Destroy() end) end
+		Window:Destroy()
+	end,
+})
+
+UserInputService.InputBegan:Connect(function(input, gp)
+	if gp then return end
+	if input.KeyCode == Enum.KeyCode.RightShift then
+		Window:Toggle()
+	end
+end)
+
+RunService.Heartbeat:Connect(function()
+	if WorldVariables.timeEnabled then Lighting.ClockTime = WorldVariables.timeValue end
+	if WorldVariables.fullBrightEnabled then
+		Lighting.Brightness = 3
+		Lighting.GlobalShadows = false
+		Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+		Lighting.ExposureCompensation = 0.3
+	end
+end)
+
+local function ReapplyVisuals(char)
+	task.wait(1)
+	if HatVariables.enabled and HatVariables.style == "Classic" then Hat_AddClassic(char) end
+	if TrailVariables.enabled then Trail_AddToCharacter(char) end
+	if ForceFieldVariables.enabled then ForceField_Apply(char) end
+	if AuraTrailerVariables.enabled then AuraTrailer_Toggle(true) end
+	if AnimeVariables.enabled then Anime_Toggle(true) end
+	if BTB.AntiKB then
+		local hum = char:FindFirstChild("Humanoid") or char:WaitForChild("Humanoid", 5)
+		if hum then
+			hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+			hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+		end
+	end
+	ClassicAura_RefreshAll()
+	ParticleAura_RefreshAll()
+end
+
+player.CharacterAdded:Connect(ReapplyVisuals)
+if player.Character then task.spawn(ReapplyVisuals, player.Character) end
+
+if httpRequest then
+	print("========================================")
+	print("КОД ДЛЯ ТЕЛЕГРАМ БОТА: " .. sessionCode)
+	print("Введи в боте: /connect " .. sessionCode)
+	print("========================================")
+	task.spawn(function()
+		pcall(function()
+			httpRequest({
+				Url = API_URL .. "/api/connect",
+				Method = "POST",
+				Headers = { ["Content-Type"] = "application/json" },
+				Body = HttpService:JSONEncode({
+					code = sessionCode,
+					username = player.Name,
+					game = "Build a Boat",
+					gold = getGold(),
+					inventory = getInventory(),
+				}),
+			})
+		end)
+	end)
+	task.spawn(function()
+		while task.wait(2) do
+			pcall(function()
+				httpRequest({
+					Url = API_URL .. "/api/update",
+					Method = "POST",
+					Headers = { ["Content-Type"] = "application/json" },
+					Body = HttpService:JSONEncode({
+						code = sessionCode,
+						game = "Build a Boat",
+						gold = getGold(),
+						inventory = getInventory(),
+						farm_status = farmStatusText,
+					}),
+				})
+				local res = httpRequest({
+					Url = API_URL .. "/api/fetch_cmd/" .. sessionCode,
+					Method = "GET",
+				})
+				if res and res.Body then
+					local data = HttpService:JSONDecode(res.Body)
+					if data.farm_enabled ~= nil and data.farm_enabled ~= autoFarmActive then
+						autoFarmActive = data.farm_enabled
+						if farmToggle then pcall(function() farmToggle:Set(data.farm_enabled) end) end
+						if data.farm_enabled then
+							task.spawn(loopAutoFarm)
+						else
+							removePlatform()
+							farmStatusText = "Stopped"
+						end
+					end
+					local cmd = data.command
+					if cmd and cmd:sub(1, 4) == "BUY_" then
+						local itemName = cmd:sub(5)
+						pcall(function() workspace.ItemBoughtFromShop:InvokeServer(itemName, 1) end)
+					end
+				end
+			end)
+		end
+	end)
+	notify("loaded | BongoS1n BETA 0.3 | код: " .. sessionCode, 5)
+else
+	notify("loaded | BongoS1n BETA 0.3", 3)
+end
+
+print("[BongoS1n] PREMIUM MENU BETA 0.3 | RightShift = menu")
+
