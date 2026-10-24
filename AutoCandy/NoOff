@@ -1,0 +1,44 @@
+local Players = game:GetService("Players")
+local Houses = workspace:WaitForChild("Houses")
+
+local function getCharacterRoot(player)
+    local character = player.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        return character.HumanoidRootPart
+    end
+    return nil
+end
+
+
+while true do
+    local children = Houses:GetChildren()
+   
+
+    if #children >= 2 then
+        local secondHouse = children[2]
+       
+
+        if secondHouse.Name == "TrickOrTreatHouse" and secondHouse:FindFirstChild("Door") then
+            local door = secondHouse.Door
+           
+
+            local doorCFrame = door:GetPivot()
+           
+   
+            for _, player in ipairs(Players:GetPlayers()) do
+                local rootPart = getCharacterRoot(player)
+                if rootPart then
+           
+                    rootPart.CFrame = doorCFrame + Vector3.new(0, 3, 0)
+                end
+            end
+           
+
+            task.wait(13)
+        else
+            task.wait(1)
+        end
+    else
+        task.wait(1)
+    end
+end
